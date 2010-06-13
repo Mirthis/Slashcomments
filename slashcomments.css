@@ -15,7 +15,8 @@ div.toggle_area {
 }
 
 div.non_toggle_area {
-  background: #FEFFAF;  
+  background: #91CDF5;
+  /*#background: #FEFFAF;*/  
 }
 
 div.toggle_label,
@@ -43,6 +44,7 @@ div.toggle_label {
   -moz-border-radius-bottomright: 5px;
   -webkit-border-bottom-right-radius: 5px;    
   cursor: pointer;
+  background:#eee;
 }
 
 div.toggle_label,
@@ -51,15 +53,21 @@ div.toggle_label * {
 }
 
 div.non_toggle_label {
-  background: #FEFFAF;
+  background: #91CDF5;
+  /*background: #FEFFAF;*/
 }
 
 div.own,
-div.non_toggle_area .own,
-div.non_toggle_label .own,
 div.toggle_label .own{
+  background:#fff ;
+  /*background: #BFD6FF;*/
+}
+
+div.non_toggle_area .own,
+div.non_toggle_label .own {
   background: #BFD6FF;
 }
+
 
 div.toggle_content {
   background: #fff;
@@ -109,4 +117,27 @@ span.comment-name {
   clear: both;
   height: 0px;
 }
+
+div.sdot_form {
+    white-space: nowrap;
+}
+
+div.sdot_form_status {
+    color:#999;
+    font-weight: bold;
+    border: #ccc solid 1px;
+    padding:5px;
+    margin-bottom: 5px;
+    margin-right: 5px;
+    display:none;
+}
+
+div.sdot_container {
+    height:35px;
+    margin:5px;
+}
+
+
+
+
 

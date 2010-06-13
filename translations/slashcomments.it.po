@@ -1,0 +1,150 @@
+# $Id$
+#
+# Italian translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  comment.tpl.php,v 1.1 2009/09/10 12:47:49 mukhsim
+#  slashcomments.inc,v 1.1 2009/09/10 12:47:49 mukhsim
+#  slashcomments.module,v 1.1 2009/09/10 12:47:49 mukhsim
+#  slashcomments.info,v 1.1 2009/09/10 12:47:49 mukhsim
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2010-04-19 23:58+0200\n"
+"PO-Revision-Date: 2010-04-20 00:05+0100\n"
+"Last-Translator: Andrea <mirthis@gmail.com>\n"
+"Language-Team: Italian <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: comment.tpl.php:32
+msgid "Anonymous"
+msgstr "Anonimo"
+
+#: slashcomments.inc:118
+msgid "Post a comment:"
+msgstr "Scrivi un commento"
+
+#: slashcomments.module:19
+msgid "Please read INSTALL.TXT file in Slashcomments module folder in order to install module properly."
+msgstr "Leggi il file INSTALL.TXT nella cartella del modulo Slashcomments per info su come installare il modulo correttamente."
+
+#: slashcomments.module:30
+msgid "Error moderationg comment"
+msgstr "Errore nella moderazione del commento"
+
+#: slashcomments.module:49
+msgid "Slashdot Moderation - Moderate"
+msgstr "Slashdot Moderatio - Modera"
+
+#: slashcomments.module:89
+msgid "Comment moderated!"
+msgstr "Commento moderato"
+
+#: slashcomments.module:178
+msgid "Default comments threshold"
+msgstr "Soglia predefinita commenti"
+
+#: slashcomments.module:181
+msgid "Default threshold for comments. Comments with lower score will be collapsed."
+msgstr "Soglia predefinita per i commenti. I commenti con un punteggio più basso saranno visualizzati chiusi"
+
+#: slashcomments.module:186
+msgid "Default display mode"
+msgstr "Modo di visualizzazione predefinito"
+
+#: slashcomments.module:189
+msgid "The default view for comments."
+msgstr "Visualizzazione predefinta dei commenti"
+
+#: slashcomments.module:202
+msgid "Threshold"
+msgstr "Soglia"
+
+#: slashcomments.module:246
+msgid "Error saving user account."
+msgstr "Errore nel salvare il profilo utente."
+
+#: slashcomments.module:351
+msgid "Moderate"
+msgstr "Modera"
+
+#: slashcomments.module:415
+msgid "Normal"
+msgstr "Normale"
+
+#: slashcomments.module:416
+msgid "Offtopic"
+msgstr "Offtopic"
+
+#: slashcomments.module:417
+msgid "Flamebait"
+msgstr "Flamebait"
+
+#: slashcomments.module:418
+msgid "Trolling"
+msgstr "Trolling"
+
+#: slashcomments.module:419
+msgid "Redundant"
+msgstr "Ridondante"
+
+#: slashcomments.module:420
+msgid "Insightful"
+msgstr "Sagace"
+
+#: slashcomments.module:421
+msgid "Interesting"
+msgstr "Interessante"
+
+#: slashcomments.module:422
+msgid "Informative"
+msgstr "Informativo"
+
+#: slashcomments.module:423
+msgid "Funny"
+msgstr "Divertente"
+
+#: slashcomments.module:424
+msgid "Overrated"
+msgstr "Sopravvalutato"
+
+#: slashcomments.module:425
+msgid "Underrated"
+msgstr "Sottovalutato"
+
+#: slashcomments.module:436
+msgid "Threshold: !n"
+msgstr "Soglia: !n"
+
+#: slashcomments.module:462
+msgid "!n: !s comments"
+msgstr "!n !s commenti"
+
+#: slashcomments.module:471
+msgid "Display: flat"
+msgstr "Lista semplice"
+
+#: slashcomments.module:472
+msgid "Display: threaded"
+msgstr "Lista ad albero"
+
+#: slashcomments.module:480
+msgid "!a per page"
+msgstr "!a commenti per pagina"
+
+#: slashcomments.module:38
+msgid "moderate comments"
+msgstr "Modera commenti"
+
+#: slashcomments.info:0
+msgid "Slashcomments"
+msgstr "Slashcomments"
+
+#: slashcomments.info:0
+msgid "Upgrades default comment system to Slashdot comment system"
+msgstr ""
+

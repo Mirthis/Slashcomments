@@ -42,16 +42,17 @@
 
 ?>
 
-<div class="<?php print $toggle_area ?>">
+<div class="<?php print $toggle_area ?>" id="comment-<?php print $comment->cid; ?>">
     <div  class="<?php print $toggle_label ?>" style="float: right; text-align: right"><b><?php print '#' . $comment->cid; ?></b></div>
     <div class="<?php print $toggle_label ?>">
       <span class="comment-name"><?php print $comment->name ?>.</span>
       <?php //print $comment->subject ?>
-      <b><?php print $comment->rating ?></b>;
+      <span class="sdot_rating"><b><?php print $comment->rating ?></b></span>;
       <?php print $date ?>;
       <?php print $comment->subject ?>
       <?php if ($new != '') { ?><span class="new"><?php print $new; ?></span><?php } ?>       
-  </div>
+      <?php print $fuck.$canvote ?>
+    </div>
   
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
     <div class="author">
