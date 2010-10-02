@@ -11,11 +11,11 @@ div.non_toggle_area {
 }
 
 div.toggle_area {
-  background: #eee;  
+  /*background: #eee; */
 }
 
 div.non_toggle_area {
-  background: #91CDF5;
+  /*background: #91CDF5;*/
   /*#background: #FEFFAF;*/  
 }
 
@@ -118,11 +118,11 @@ span.comment-name {
   height: 0px;
 }
 
-div.sdot_form {
+div.scomments_form {
     white-space: nowrap;
 }
 
-div.sdot_form_status {
+div.scomments_form_status {
     color:#999;
     font-weight: bold;
     border: #ccc solid 1px;
@@ -132,12 +132,27 @@ div.sdot_form_status {
     display:none;
 }
 
-div.sdot_container {
+div.scomments_container {
     height:35px;
     margin:5px;
 }
 
+span.scomments_info {
+  float:right;
+  clear:right;
+  padding-left: 1em;
+}
 
+/*.scomments_rating {
+  text-decoration: underline
+}*/
+
+/*.scomment_info a:link,
+.scomment_info a:visited,
+.scomment_info a:active,
+.scomment_info a:hover {
+  color: #000000;
+}*/
 
 
 

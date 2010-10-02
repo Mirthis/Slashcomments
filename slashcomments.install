@@ -1,0 +1,160 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installation file for VotingAPI module.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function slashcomments_schema() {
+  $schema['slashcomments_karma'] = array(
+          'description' => t('Entity containing relevant metrics related to karma.'),
+          'fields' => array(
+                  'uid' => array(
+                          'description' => t('User identifier'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'karma' => array(
+                          'description' => t('Karma value'),
+                          'type' => 'int',
+                          'size' => 'small',
+                          'not null' => TRUE,
+                  ),
+                  'total' => array(
+                          'description' => t('Number of comments posted by the user'),
+                          'type' => 'int',
+                          'size' => 'small',
+                          'not null' => TRUE,
+                          'default' => 0,
+                  ),
+                  'positive' => array(
+                          'description' => t('Number of comments with a positive (> +1) rating'),
+                          'type' => 'int',
+                          'size' => 'small',
+                          'not null' => TRUE,
+                          'default' => 0,
+                  ),
+                  'negative' => array(
+                          'description' => t('Number of comments with a negative (< +1) rating'),
+                          'type' => 'int',
+                          'size' => 'small',
+                          'not null' => TRUE,
+                          'default' => 0,
+                  ),
+                  'neutral' => array(
+                          'description' => t('Number of comments with a neutral (+1) rating'),
+                          'type' => 'int',
+                          'size' => 'small',
+                          'not null' => TRUE,
+                          'default' => 0,
+                  ),
+                  'timestamp' => array(
+                          'description' => t('Timestamp of last record updated'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                          'default' => 0,
+                  ),
+          ),
+          'primary key' => array('uid'),
+  );
+
+  $schema['slashcomments_ratings'] = array(
+          'description' => t('Entity containing slashcomments score and rating'),
+          'fields' => array(
+                  'cid' => array(
+                          'description' => t('Comment identifier'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'uid' => array(
+                          'description' => t('User identifier'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'karma' => array(
+                          'description' => t('User kamra when comment was posted'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'score' => array(
+                          'description' => t('Comment score'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'score_karma' => array(
+                          'description' => t('Comment score with karma'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+                  'most_rated' => array(
+                          'description' => t('Comment rating'),
+                          'type' => 'int',
+                          'not null' => FALSE,
+                  ),
+                  'nums_rating' => array(
+                          'description' => t('Number of ratings'),
+                          'type' => 'int',
+                          'not null' => FALSE,
+                  ),
+                  'timestamp' => array(
+                          'description' => t('Timestamp of last update'),
+                          'type' => 'int',
+                          'not null' => TRUE,
+                  ),
+          ),
+          'unique keys' => array(
+                  'cid' => array('cid')
+          ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function slashcomments_install() {
+  drupal_install_schema('slashcomments');
+  db_query("UPDATE {system} SET weight = 15 WHERE name = 'slashcomments'");
+  slashcomments_init_settings();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function slashcomments_uninstall() {
+  drupal_uninstall_schema('slashcomments');
+
+  // Delete variables used by the module
+  variable_del('slashcomments_limit_takepart');
+  variable_del('slashcomments_limit_newbie');
+  variable_del('slashcomments_enable_karma');
+
+  $result = db_query("SELECT name FROM {variable} WHERE name LIKE '%s'", 'comment_default_threshold_%');
+
+  while ($variable_name = db_fetch_array($result)) {
+    variable_del($variable_name['name']);
+  }
+}
+
+/**
+ * Set systme variables used by the module.
+ */
+function slashcomments_init_settings() {
+  $types = node_get_types();
+  // for each content types override variables set by the comment module
+  // with value supported by slashcomments
+  foreach ($types as $t) {
+      if (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_THREADED_COLLAPSED) {
+        variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED);
+      }
+      elseif (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_FLAT_COLLAPSED) {
+          variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_FLAT_EXPANDED);
+      }
+      variable_set('comment_default_order_'. $t->type, COMMENT_ORDER_OLDEST_FIRST);
+  }
+}

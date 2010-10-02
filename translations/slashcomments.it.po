@@ -1,150 +1,345 @@
 # $Id$
 #
-# Italian translation of Drupal (general)
+# LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  comment.tpl.php,v 1.1 2009/09/10 12:47:49 mukhsim
-#  slashcomments.inc,v 1.1 2009/09/10 12:47:49 mukhsim
-#  slashcomments.module,v 1.1 2009/09/10 12:47:49 mukhsim
+#  slashcomments.admin.inc: n/a
+#  slashcomments.module,v 1.2 2010/06/13 16:10:19 mirthis
+#  advf-author-pane.tpl.php,v 1.1.2.13 2009/03/30 15:33:50 michellec
+#  advf-author-pane.tpl.php,v 1.1.2.11 2009/03/30 15:33:50 michellec
+#  author-pane.tpl.php,v 1.1.2.13 2009/03/30 15:33:27 michellec
+#  slashcomments.views.inc: n/a
 #  slashcomments.info,v 1.1 2009/09/10 12:47:49 mukhsim
+#  votingapi.install,v 1.21.4.11 2009/06/29 14:05:01 eaton
+#  templates/slashcomments-advf-forum-post.tpl.php: n/a
+#  templates/slashcomments-comment.tpl.php: n/a
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2010-04-19 23:58+0200\n"
-"PO-Revision-Date: 2010-04-20 00:05+0100\n"
-"Last-Translator: Andrea <mirthis@gmail.com>\n"
-"Language-Team: Italian <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2010-10-02 13:47+0200\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: comment.tpl.php:32
-msgid "Anonymous"
-msgstr "Anonimo"
+#: slashcomments.admin.inc:17
+msgid "General"
+msgstr "Generale"
 
-#: slashcomments.inc:118
-msgid "Post a comment:"
-msgstr "Scrivi un commento"
+#: slashcomments.admin.inc:24
+msgid "Number of days before a new user can moderate"
+msgstr "Numero di giorni prima che un nuovo utente possa moderare"
 
-#: slashcomments.module:19
-msgid "Please read INSTALL.TXT file in Slashcomments module folder in order to install module properly."
-msgstr "Leggi il file INSTALL.TXT nella cartella del modulo Slashcomments per info su come installare il modulo correttamente."
+#: slashcomments.admin.inc:27
+msgid "Number of days needed before a new registered user is allowed to moderate"
+msgstr "Numero di giorni necessari prima che un nuovo utente possa moderare"
 
-#: slashcomments.module:30
-msgid "Error moderationg comment"
-msgstr "Errore nella moderazione del commento"
+#: slashcomments.admin.inc:32
+msgid "Users who commented a content can't moderate it"
+msgstr "Gli utenti che commentano un nodo non possono moderarlo"
 
-#: slashcomments.module:49
-msgid "Slashdot Moderation - Moderate"
-msgstr "Slashdot Moderatio - Modera"
+#: slashcomments.admin.inc:34
+msgid "If set user who had left comment for a node can't moderate others comments on that same node."
+msgstr "Se impostato gli utenti che hanno commentato un nodo non possono moderare gli altri commenti per il nodo stesso."
 
-#: slashcomments.module:89
-msgid "Comment moderated!"
-msgstr "Commento moderato"
+#: slashcomments.admin.inc:42
+msgid "Delete user moderation left before user participation"
+msgstr "Cancella le moderazioni dell'utente precedenti al suo inserimento di un commento"
 
-#: slashcomments.module:178
-msgid "Default comments threshold"
-msgstr "Soglia predefinita commenti"
+#: slashcomments.admin.inc:44
+msgid "Delete user modertion on node's comment if the user himself left a comment for the node participating to the discussion."
+msgstr "Cancella la le moderazioni effettuate dall'utente sul nodo, quando l'utente stesso lascia un commento."
 
-#: slashcomments.module:181
-msgid "Default threshold for comments. Comments with lower score will be collapsed."
-msgstr "Soglia predefinita per i commenti. I commenti con un punteggio piÃ¹ basso saranno visualizzati chiusi"
+#: slashcomments.admin.inc:52 slashcomments.module:935 templates/slashcomments-advf-author-pane-stacked.tpl.php:46 templates/slashcomments-advf-author-pane.tpl.php:108 templates/slashcomments-author-pane.tpl.php:163
+msgid "Karma"
+msgstr "Karma"
 
-#: slashcomments.module:186
-msgid "Default display mode"
-msgstr "Modo di visualizzazione predefinito"
+#: slashcomments.admin.inc:59
+msgid "Enable karma"
+msgstr "Abilità karma"
 
-#: slashcomments.module:189
-msgid "The default view for comments."
-msgstr "Visualizzazione predefinta dei commenti"
+#: slashcomments.admin.inc:61
+msgid "Karma for each user will be calculated based on their comment score and will affect their ability to moderate others and the initial rating of their new comments."
+msgstr "Il Karma di ogni tuente sarà calcolato in base al punteggio dei suoi commenti e influenzerà la loro possibilità di moderare e il punteggio iniziale dei nuovi commenti inseriti."
 
-#: slashcomments.module:202
-msgid "Threshold"
-msgstr "Soglia"
+#: slashcomments.admin.inc:70
+msgid "Karma value user need to be able to moderate"
+msgstr "Valore del karma che un utente deve avere per poter moderare"
 
-#: slashcomments.module:246
-msgid "Error saving user account."
-msgstr "Errore nel salvare il profilo utente."
+#: slashcomments.admin.inc:73
+msgid "Karma value a user must have to be able to moderate"
+msgstr "Valore del karma che un utente deve avere per poter moderare""
 
-#: slashcomments.module:351
-msgid "Moderate"
-msgstr "Modera"
-
-#: slashcomments.module:415
-msgid "Normal"
-msgstr "Normale"
-
-#: slashcomments.module:416
-msgid "Offtopic"
-msgstr "Offtopic"
-
-#: slashcomments.module:417
-msgid "Flamebait"
-msgstr "Flamebait"
-
-#: slashcomments.module:418
-msgid "Trolling"
-msgstr "Trolling"
-
-#: slashcomments.module:419
-msgid "Redundant"
-msgstr "Ridondante"
-
-#: slashcomments.module:420
-msgid "Insightful"
-msgstr "Sagace"
-
-#: slashcomments.module:421
-msgid "Interesting"
-msgstr "Interessante"
-
-#: slashcomments.module:422
-msgid "Informative"
-msgstr "Informativo"
-
-#: slashcomments.module:423
-msgid "Funny"
-msgstr "Divertente"
-
-#: slashcomments.module:424
-msgid "Overrated"
-msgstr "Sopravvalutato"
-
-#: slashcomments.module:425
-msgid "Underrated"
-msgstr "Sottovalutato"
-
-#: slashcomments.module:436
-msgid "Threshold: !n"
-msgstr "Soglia: !n"
-
-#: slashcomments.module:462
-msgid "!n: !s comments"
-msgstr "!n !s commenti"
-
-#: slashcomments.module:471
-msgid "Display: flat"
-msgstr "Lista semplice"
-
-#: slashcomments.module:472
-msgid "Display: threaded"
-msgstr "Lista ad albero"
-
-#: slashcomments.module:480
-msgid "!a per page"
-msgstr "!a commenti per pagina"
-
-#: slashcomments.module:38
-msgid "moderate comments"
-msgstr "Modera commenti"
-
-#: slashcomments.info:0
+#: slashcomments.views.inc:31;50 slashcomments.module:77 slashcomments.info:0
 msgid "Slashcomments"
 msgstr "Slashcomments"
 
+#: slashcomments.views.inc:72 slashcomments.module:117;260
+msgid "Score"
+msgstr "Punteggio"
+
+#: slashcomments.views.inc:73;83
+msgid "Comment score"
+msgstr "Punteggio del  commento"
+
+#: slashcomments.views.inc:98
+msgid "Comment score with Karma"
+msgstr "Punteggio del commento con karma"
+
+#: slashcomments.views.inc:99
+msgid "Comment score with karma modifier applied"
+msgstr "Punteggio del commento considerando l'applicazione del karma"
+
+#: slashcomments.views.inc:109
+msgid "Comment score with karma"
+msgstr "Punteggio del commento con karma""
+
+#: slashcomments.views.inc:125;136
+msgid "Comment User Karma"
+msgstr "Karma dell'autore del commento"
+
+#: slashcomments.views.inc:126
+msgid "User karma when the comment was posted"
+msgstr "Karma dell'autore quando il commento è stato inserito"
+
+#: slashcomments.views.inc:151
+msgid "Number of ratings"
+msgstr "Numero di voti"
+
+#: slashcomments.views.inc:152
+msgid "Number of time the comment has been moderated"
+msgstr "Numero di volte in cui il commento è stato moderato"
+
+#: slashcomments.views.inc:162
+msgid "Numbers of rating"
+msgstr "Numero di voti"
+
+#: slashcomments.views.inc:177
+msgid "Rating"
+msgstr "Valutazioe"
+
+#: slashcomments.views.inc:178;187
+msgid "Comment Rating"
+msgstr "Valutazione commento"
+
+#: slashcomments.module:43
+msgid "Error moderationg comment"
+msgstr "Errore nella moderazione"
+
+#: slashcomments.module:122
+msgid "Comment moderated!"
+msgstr "Comment moderato"
+
+#: slashcomments.module:290
+msgid "(permalink)"
+msgstr "(permalink)"
+
+#: slashcomments.module:389
+msgid "Default comments threshold"
+msgstr "Soglia di default"
+
+#: slashcomments.module:392
+msgid "Default threshold for comments. Comments with lower score will be collapsed."
+msgstr "Sogli di default per i commenti. I commenti con un punteggio più basso della soglia saranno nascosti."
+
+#: slashcomments.module:397
+msgid "Default display mode"
+msgstr "Visualizzazione di default"
+
+#: slashcomments.module:400
+msgid "The default view for comments."
+msgstr "Visualizzazione di default per i commenti."
+
+#: slashcomments.module:413
+msgid "Threshold"
+msgstr "Soglia"
+
+#: slashcomments.module:470
+msgid "Error saving user account."
+msgstr "Erorre nel salvataggio dell'account utente."
+
+#: slashcomments.module:652
+msgid "Moderate"
+msgstr "Moderare"
+
+#: slashcomments.module:939
+msgid "Current value "
+msgstr "Valore corrente"
+
+#: slashcomments.module:945
+msgid "Total comments"
+msgstr "Numero di commenti"
+
+#: slashcomments.module:951
+msgid "Positive comments"
+msgstr "Commenti positivi"
+
+#: slashcomments.module:957
+msgid "Negative comments"
+msgstr "Commenti negativi"
+
+#: slashcomments.module:963
+msgid "Neutral comments"
+msgstr "Commenti neutri"
+
+#: slashcomments.module:1013
+msgid "Normal"
+msgstr "Normale"
+
+#: slashcomments.module:1014
+msgid "Offtopic"
+msgstr "Offtopic"
+
+#: slashcomments.module:1015
+msgid "Flamebait"
+msgstr "Flamebait"
+
+#: slashcomments.module:1016
+msgid "Trolling"
+msgstr "Trolling"
+
+#: slashcomments.module:1017
+msgid "Redundant"
+msgstr "Ridontante"
+
+#: slashcomments.module:1018
+msgid "Insightful"
+msgstr "Sagace"
+
+#: slashcomments.module:1019
+msgid "Interesting"
+msgstr "Interessante"
+
+#: slashcomments.module:1020
+msgid "Informative"
+msgstr "Informativo"
+
+#: slashcomments.module:1021
+msgid "Funny"
+msgstr "Divertente"
+
+#: slashcomments.module:1022
+msgid "Overrated"
+msgstr "Sopravvalutato"
+
+#: slashcomments.module:1023
+msgid "Underrated"
+msgstr "Sottovalutato"
+
+#: slashcomments.module:1038
+msgid "Threshold: !n"
+msgstr "Soglia: !n"
+
+#: slashcomments.module:1071
+msgid "!n: !s comments"
+msgstr "!n: !s commenti"
+
+#: slashcomments.module:1079
+msgid "Display: flat"
+msgstr "Lista semplice"
+
+#: slashcomments.module:1080
+msgid "Display: threaded"
+msgstr "Lista ad albero"
+
+#: slashcomments.module:1088
+msgid "!a per page"
+msgstr "!a per pagina"
+
+#: slashcomments.module:58
+msgid "moderate comments"
+msgstr "Modera commenti"
+
+#: slashcomments.module:69
+msgid "Slashcomments - AJAX moderation"
+msgstr "Slashcomments - moderazione AJAX"
+
+#: slashcomments.install:14
+msgid "Entity containing relevant metrics related to karma."
+msgstr "Entità contenente le informazioni di base sul karma."
+
+#: slashcomments.install:17
+msgid "User identifier."
+msgstr "Identificativo utente"
+
+#: slashcomments.install:22
+msgid "Karma value"
+msgstr "Valore del karma"
+
+#: slashcomments.install:28
+msgid "Number of comments posted by the user"
+msgstr "Numero di commenti inseriti dall'utente"
+
+#: slashcomments.install:35
+msgid "Number of comments with a positive (> +1) rating"
+msgstr "Numero di commenti con un punteggio positivo (> +1)"
+
+#: slashcomments.install:42
+msgid "Number of comments with a negative (< +1) rating"
+msgstr "Numero di commenti con un punteggio negativo (< +1)"
+
+#: slashcomments.install:49
+msgid "Number of comments with a neutral (+1) rating"
+msgstr "Numero di commenti con un punteggio neutro (+1)"
+
+#: slashcomments.install:56
+msgid "Timestamp of last record updated"
+msgstr "Timestamp dell'ultimo update"
+
+#: slashcomments.install:66
+msgid "Entity containing slashcomments score and rating"
+msgstr "Entità contenente i punteggi e le valutazioni per i commenti"
+
+#: slashcomments.install:69
+msgid "Comment identifier"
+msgstr "Identificativo del commento"
+
+#: slashcomments.install:79
+msgid "User kamra when comment was posted"
+msgstr "Karma dell'utente quando ha inserisci il commento"
+
+#: slashcomments.install:94
+msgid "Comment rating"
+msgstr "Valutazione del commento"
+
+#: slashcomments.install:104
+msgid "Timestamp of last update"
+msgstr "Timestamp dell'ultima modifica"
+
 #: slashcomments.info:0
 msgid "Upgrades default comment system to Slashdot comment system"
-msgstr ""
+msgstr "Aggiorna il sistema di commenti con alcune funzionalità stile slashdot"
+
+#: templates/slashcomments-advf-author-pane-stacked.tpl.php:54 templates/slashcomments-advf-author-pane.tpl.php:72 templates/slashcomments-author-pane.tpl.php:127
+msgid "IP"
+msgstr "IP"
+
+#: templates/slashcomments-advf-author-pane-stacked.tpl.php:70 templates/slashcomments-advf-author-pane.tpl.php:46 templates/slashcomments-author-pane.tpl.php:101
+msgid "Joined"
+msgstr "Registrato"
+
+#: templates/slashcomments-advf-author-pane-stacked.tpl.php:76 templates/slashcomments-advf-author-pane.tpl.php:52 templates/slashcomments-author-pane.tpl.php:107
+msgid "Posts"
+msgstr "Commenti"
+
+#: templates/slashcomments-advf-author-pane-stacked.tpl.php:82 templates/slashcomments-advf-author-pane.tpl.php:58 templates/slashcomments-author-pane.tpl.php:113
+msgid "!Points"
+msgstr "Punti"
+
+#: templates/slashcomments-advf-author-pane-stacked.tpl.php:111 templates/slashcomments-advf-author-pane.tpl.php:64 templates/slashcomments-author-pane.tpl.php:119
+msgid "Groups"
+msgstr "Gruppi"
+
+#: templates/slashcomments-advf-forum-post.tpl.php:86
+msgid "Top"
+msgstr "Top"
+
+#: templates/slashcomments-comment.tpl.php:30
+msgid "Anonymous"
+msgstr "Anonimo"
 

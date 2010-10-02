@@ -5,89 +5,116 @@
  * Module to emulate Slashdot comment system
  */
 
-/**
- * Define new comments display modes
- */
-define('COMMENT_MODE_FLAT', 1);
-define('COMMENT_MODE_THREADED', 2);
+// Commnet flat and trheaded display
+define('SLASHCOMMENTS_MODE_FLAT', 2);
+define('SLASHCOMMENTS_MODE_THREADED', 4);
+
+// Comment default rating  */
+define('SLASHCOMMENTS_DEFAULT_RATING', 1);
+// Comment default rating  */
+define('SLASHCOMMENTS_DEFAULT_THRESHOLD', 1);
+// Settings:
+//  limit moderation from participating users
+define('SLASHCOMMENTS_LIMIT_TAKEPART', 1);
+// delete moderation from participating users
+define('SLASHCOMMENTS_DELETE_TAKEPART', 0);
+// days before newbie users can post
+define('SLASHCOMMENTS_LIMIT_NEWBIE', 14);
+// enable karma
+define('SLASHCOMMENTS_ENABLE_KARMA', 0);
+// limit moderation based on karma value
+define('SLASHCOMMENTS_LIMIT_KARMA', 0);
+// initial karma value
+define('SLASHCOMMENTS_DEFAULT_KARMA', 1);
+
 
 /**
- * Implemenatation of hook_init()
+ * Implementation of hook_init().
  */
 function slashcomments_init() {
-  if (function_exists('comment_render')) {
-    drupal_set_message(t('Please read INSTALL.TXT file in Slashcomments module folder in order to install module properly.'), 'error');
-  }
-  else {
-    module_load_include('inc', 'slashcomments', 'slashcomments');
 
-    // add base url to js variable
-    drupal_add_js(
-            array('baseUrl'      => $GLOBALS['base_url']),
-            'setting'
-    );
-    drupal_add_js(array('slashdot' =>
-            array('error_status' => t("Error moderationg comment"),
-                    'load_image_path' => $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'slashcomments') . '/loading.gif')), 'setting');
-  }
+  // add base url to js variable
+  drupal_add_js(
+          array('baseUrl'      => $GLOBALS['base_url']),
+          'setting'
+  );
+  // add vatiable used for jquery submit
+  drupal_add_js(array('slashdot' =>
+          array('error_status' => t("Error moderationg comment"),
+                  'load_image_path' => $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'slashcomments') . 'images/loading.gif')), 'setting');
 }
 
 /**
- * Implementation of hook_perm()
+ * Implementation of hook_views_api().
+ */
+function slashcomments_views_api() {
+  return array('api' => 2.0);
+}
+
+/**
+ * Implementation of hook_perm().
  */
 function slashcomments_perm() {
   return array('moderate comments');
 }
 
 /**
- * Implementation of hook_menu()
+ * Implementation of hook_menu().
  */
 function slashcomments_menu() {
   $items = array();
 
   // Add the callback for AJAX moderation
   $items['slashdot/moderate'] = array(
-          'title' => 'Slashdot Moderation - Moderate',
+          'title' => 'Slashcomments - AJAX moderation',
           'page callback' => 'slashdotcomments_moderate',
-          'access arguments' => array('access content'),
+          'access callback' => 'slashcomments_moderate_access',
           'type' => MENU_CALLBACK,
+  );
+
+  // Add the callback for settings menù
+  $items['admin/settings/slashcomments'] = array(
+          'title' => 'Slashcomments',
+          'page callback' => 'drupal_get_form',
+          'page arguments' => array('slashcomments_admin_settings'),
+          'access arguments' => array('Administer Slashcomments settings'),
+          'type' => MENU_NORMAL_ITEM,
+          'file' => 'slashcomments.admin.inc',
   );
 
   return $items;
 }
 
 /**
- * Implemente the callback function to hnandle AJAX modration
+ * Implementation of access callback
+ */
+function slashcomments_moderate_access() {
+  return user_access('access content') && user_access('moderate comments');
+}
+
+/**
+ * Implemente the callback for slashdot/moderate menu entry responsible
+ * of hnandling AJAX modration
  */
 function slashdotcomments_moderate() {
   global $user;
 
+  // Check needed variable has been sent
   if (empty($_POST['js']) || !is_numeric($_POST['cid'])
           || !is_numeric($_POST['uid']) || !is_numeric($_POST['vote']) ) {
     return;
   }
-  elseif (!slashcomments_user_can_vote($user->uid, $_POST['cid'])) {
+  // save the vote
+  if (!slashcomments_store_vote($_POST['cid'], $_POST['vote'])) {
     return;
   }
 
-  // create the vote object
-  $vote  = array(
-          'content_type'    => 'comment',
-          'content_id'      => $_POST['cid'],
-          'value_type'      => 'option',
-          'value'           => $_POST['vote'],
-  );
-
-  // Store the vote
-  votingapi_add_votes($vote);
-  votingapi_recalculate_results('comment', $_POST['cid'], TRUE);
-
-  // Get the new rating for the comment
+  // Get the new rating for the moderated comment
   $rating = slashcomments_get_comment_rating($_POST['cid'], $_POST['uid']);
 
   // Create the string representation of the rating
-  $description = isset($rating['description']) ? ' (' . $rating['description'] . ')' : '';
-  $rating_str = sprintf("%+d", $rating['rating']) . $description;
+  $description = isset($rating['description']) ? ' '. $rating['description'] : '';
+  $rating_str = '(' . t('Score') . ':' . $rating['rating'] . $description . ')';
 
   // Set variable to be used by ajax success hander
   drupal_json(array(
@@ -98,24 +125,170 @@ function slashdotcomments_moderate() {
 }
 
 /**
- * Implemente hook theme
+ * Submit function for comment moderation form, called if AJAX moderation is off
  */
-function slashcomments_theme() {
-  return array(
-          'slashcomments_moderation_form' => array(
-                  'arguments' => array('form' => NULL),
-          ),
-  );
+function slashcomments_moderation_form_submit($form, &$form_state) {
+  slashcomments_store_vote($form_state['values']['cid'], $form_state['values']['vote']);
+
 }
 
 /**
- * Implementation of hook_theme_registry_alter()
- * Overrides default theme_comment_view function
+ * Store a moderation vote
+ */
+function slashcomments_store_vote($cid, $vote) {
+  global $user;
+  $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
+
+  // Check if user is allowed to vote
+  if (!slashcomments_user_can_vote($user->uid, $cid)) {
+    return FALSE;
+  }
+
+  // Build vote object
+  $vote  = array(
+          'content_type'    => 'comment',
+          'content_id'      => $cid,
+          'value_type'      => 'option',
+          'value'           => $vote,
+          'tag'             => 'slashcomments',
+  );
+
+  // Cast the vote and recalculate score and rating for the comment
+  votingapi_add_votes($vote);
+  votingapi_recalculate_results('comment', $cid, TRUE);
+
+  slashcomments_update_rating($cid, $author_uid);
+
+  // If karma is enabled updated its value
+  if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+    slashcomments_update_karma($author_uid);
+  }
+
+  return TRUE;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function slashcomments_theme() {
+  $items['slashcomments_comment'] = array(
+          'template' => 'slashcomments-comment',
+  );
+
+  $items['slashcomments_moderation_form'] = array(
+          'arguments' => array('form' => NULL),
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme_registry_alter().
  */
 function slashcomments_theme_registry_alter($theme_registry) {
+  // replace the theme function for comment_view */
   if (!empty($theme_registry['comment_view'])) {
     $theme_registry['comment_view']['function'] = 'slashcomments_comment_view';
   }
+
+  // replace the theme function for collapsed view with expanded view */
+  if (!empty($theme_registry['comment_flat_collapsed'])) {
+    $theme_registry['comment_flat_collapsed']['function'] = 'theme_comment_flat_expanded';
+  }
+  if (!empty($theme_registry['comment_thread_collapsed'])) {
+    $theme_registry['comment_thread_collapsed']['function'] = 'theme_comment_thread_expanded';
+  }
+
+  // Code ported from the advanced forum module
+  // --- The following section manipulates the theme registry so the .tpl files
+  // --- for the given templates can be found first in the (sub)theme directory
+  // --- then in ancestor themes, if any, and finally in the slashcomments folder.
+
+  // Affected templates
+
+  $templates = array('comment', 'author_pane');
+
+  // Find all our ancestor themes and put them in an array.
+  global $theme;
+  $themes = list_themes();
+
+  $ancestor_paths = array();
+  $ancestor = $theme;
+  while ($ancestor && isset($themes[$ancestor]->base_theme)) {
+    array_unshift($ancestor_paths, dirname($themes[$themes[$ancestor]->base_theme]->filename));
+    $ancestor = $themes[$ancestor]->base_theme;
+  }
+  $module_path = drupal_get_path('module', 'slashcomments') . '/templates';
+
+  foreach ($templates as $template) {
+    // Sanity check in case the template is not being used.
+    if (is_array($theme_registry[$template])) {
+      // If there was a path in there, store it.
+      $existing_path = array_shift($theme_registry[$template]['theme paths']);
+      array_unshift($theme_registry[$template]['theme paths'], $existing_path, $module_path);
+
+      // If there are any ancestor paths (ie: we are in a subtheme, add those)
+      foreach ($ancestor_paths as $ancestor_path) {
+        $theme_registry[$template]['theme paths'][] = $ancestor_path;
+      }
+      //Put the active theme's path last since that takes precidence.
+      $theme_registry[$template]['theme paths'][] = path_to_theme();
+    }
+  }
+}
+
+/**
+ * Preprocesses template variables for the comment template.
+ */
+function slashcomments_preprocess_comment(&$variables) {
+  // get current tpl_file
+  $tpl_file = $variables['template_files'][count($variables['template_files'])-1];
+  // Replace the template file with the version provided by slashcomments
+  if ($tpl_file == 'advf-forum-post') {
+    $variables['template_files'][] = "slashcomments-advf-forum-post";
+  }
+  else {
+    $variables['template_files'][] = "slashcomments-comment";
+  }
+
+  $comment = $variables['comment'];
+
+  // get score and rating
+  $rating = slashcomments_get_comment_rating($comment->cid, $comment->uid);
+
+  $description = isset($rating['description']) ? ' '. $rating['description'] : '';
+  $variables['rating'] = '(' . t('Score') . ':' . $rating['rating'] . $description . ')';
+
+  // get default threshold for the content type
+  $threshold = _slashcomments_get_display_setting('threshold', $variables['node']);
+
+  // fill out template variables
+  if ($rating['rating'] >= $threshold) {
+    $variables['collapsed'] = '';
+    $variables['toggle_label'] = 'non_toggle_label';
+    $variables['toggle_area'] = 'non_toggle_area';
+  }
+  else {
+    $variables['collapsed'] = 'collapsed';
+    $variables['toggle_label'] = 'toggle_label';
+    $variables['toggle_area'] = 'toggle_area';
+  }
+  $variables['toggle_label'] .= ' ' . $comment->own;
+  $variables['toggle_area'] .= ' ' . $comment->own;
+
+    // generate permalink
+    $fragment = 'comment-' . $variables['comment']->cid;
+    $query = ($page_number) ? 'page=' . $page_number : NULL;
+    $img_path = drupal_get_path('module', 'slashcomments') . '/images';
+    $linktext = '<img src="' . url($img_path) . '/permalink.gif" />';
+    $linkpath = 'node/' . $variables['node']->nid;
+    $variables['comment_link'] = l($linktext, $linkpath, array('query' => $query, 'fragment' => $fragment, 'html' => TRUE));
+
+    // Link to page created by Comment Page module, if it exists
+    $variables['page_link'] = '';
+    if (!empty($variables['comment']->page_url) && !(arg(0) == 'comment' && arg(1) == $variables['comment']->cid)) {
+      $variables['page_link'] = l(t('(permalink)'), $variables['comment']->page_url);
+    }
 }
 
 /**
@@ -142,39 +315,68 @@ function slashcomments_comment_view($comment, $node, $links = array(), $visible 
 }
 
 /**
- * Implementation of hook_comment()
+ * Implementation of hook_comment().
  */
 function slashcomments_comment($comment, $op) {
   switch ($op) {
     case 'view':
-      drupal_add_js(drupal_get_path('module', 'slashcomments') .'/slashdot.js');
+      // Add javascript and CSS File
+      // TODO Move in a different place so that are not called for each comments
+      drupal_add_js(drupal_get_path('module', 'slashcomments') .'/slashcomments.js');
       drupal_add_css(drupal_get_path('module', 'slashcomments') .'/slashcomments.css');
-      global $user;
-      $rating = slashcomments_get_comment_rating($comment->cid, $comment->uid);
-      if (isset($rating['description'])) {
-        $description = ' (' . $rating['description'] . ')';
-      }
-      else {
-        $description = '';
-      }
-      $comment->score = sprintf("%+d", $rating['rating']);
-      $comment->rating = sprintf("%+d", $rating['rating']) . $description;
-      $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
 
+      global $user;
+      $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
+      // Hide moderation module if user can't moderate or is on the edit or reply page
       if (!$reply && slashcomments_user_can_vote($user->uid, $comment->cid)) {
         $comment->comment = $comment->comment . drupal_get_form('slashcomments_moderation_form', $comment->cid, $comment->uid);
-        ;
-
       }
+
+      // marke comments of the user in order to theme them differently
       if ($user->uid == $comment->uid && $user->uid != 0) {
         $comment->own = "own";
       }
+      break;
+    case 'insert':
+    // if the user has moderated comments for this node before posting ots previous
+    // moderation are removed
+      if (variable_get('slashcomments_delete_takepart', SLASHCOMMENTS_DELETE_TAKEPART) == 1) {
+        slashcomments_delete_user_comment_moderation($comment['nid'], $comment['uid']);
+      }
+      // if karma is enable apply a modifier to the initial comment rating
+      if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+        slashcomments_init_rating($comment['cid'], $comment['uid']);
+      }
+
+      break;
+    // If the comment has been removed, delete infos about
+    // is score and rating and update author karma
+    case 'delete':
+      $delete_votes = "DELETE FROM {votingapi_vote}
+                        WHERE content_id = %d
+                        AND tag = 'slashcomments'";
+
+      db_query($delete_votes, $comment->cid);
+      if (db_affected_rows() < 1) {
+        break;
+      }
+
+      votingapi_recalculate_results('comment', $comment->cid, TRUE);
+      slashcomments_delete_rating($comment->cid);
+      slashcomments_update_karma($comment->uid);
       break;
   }
 }
 
 /**
- * Add threshold to comments control form
+ * Delete ratings for a single comment
+ */
+function slashcomments_delete_rating($cid) {
+  db_query("DELETE FROM {slashcomments_ratings} WHERE cid = %d", $cid);
+}
+
+/**
+ * Add threshold to comments control forms
  */
 function slashcomments_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'comment_form') {
@@ -185,7 +387,7 @@ function slashcomments_form_alter(&$form, $form_state, $form_id) {
     $form['comment']['comment_default_threshold'] = array(
             '#type' => 'select',
             '#title' => t('Default comments threshold'),
-            '#default_value' => variable_get('comment_default_threshold_'. $form['#node_type']->type, 1),
+            '#default_value' => variable_get('comment_default_threshold_'. $form['#node_type']->type, SLASHCOMMENTS_DEFAULT_THRESHOLD),
             '#options' => _slashcomments_thresholds(),
             '#description' => t('Default threshold for comments. Comments with lower score will be collapsed.'),
             '#weight' => -5,
@@ -193,7 +395,7 @@ function slashcomments_form_alter(&$form, $form_state, $form_id) {
     $form['comment']['comment_default_mode'] = array(
             '#type' => 'select',
             '#title' => t('Default display mode'),
-            '#default_value' => variable_get('comment_default_mode_'. $form['#node_type']->type, COMMENT_MODE_FLAT),
+            '#default_value' => variable_get('comment_default_mode_'. $form['#node_type']->type, SLASHCOMMENTS_MODE_FLAT),
             '#options' => _slashcomments_modes(),
             '#description' => t('The default view for comments.'),
             '#weight' => -4,
@@ -210,7 +412,7 @@ function slashcomments_form_alter(&$form, $form_state, $form_id) {
             '#type' => 'select',
             '#title' => t('Threshold'),
             '#options' => _slashcomments_thresholds($node),
-            '#default_value' => _slashcomments_get_display_setting('threshold', $node) + 1,
+            '#default_value' => _slashcomments_get_display_setting('threshold', $node),
             '#weight' => 0,
     );
 
@@ -238,12 +440,25 @@ function slashcomments_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
+
+/**
+ * Convertratings numeric options to descriptions
+ */
+function slashcomments_rating2description($rating) {
+  static $descriptions;
+
+  $descriptions = _slashcomments_moderation_options();
+  if ($descriptions[$rating]) {
+    return $descriptions[$rating];
+  }
+}
+
 /**
  * Submit function for comment control form
  */
 function slashcomments_comment_control_submit($form, &$form_state) {
   global $user;
-  $threshold = $form_state['values']['threshold']-1;
+  $threshold = $form_state['values']['threshold'];
   $mode = $form_state['values']['mode'];
   $order = $form_state['values']['order'];
   $comments_per_page = $form_state['values']['comments_per_page'];
@@ -276,13 +491,13 @@ function _slashcomments_get_display_setting($setting, $node) {
     // get the setting's site default
     switch ($setting) {
       case 'threshold':
-        $default = variable_get('comment_default_threshold_'. $node->type, 2) - 1;
+        $default = variable_get('comment_default_threshold_'. $node->type, SLASHCOMMENTS_DEFAULT_THRESHOLD);
         break;
       case 'mode':
         $default = variable_get('comment_default_mode_'. $node->type, COMMENT_MODE_THREADED_EXPANDED);
         break;
       case 'sort':
-        $default = variable_get('comment_default_order_'. $node->type, COMMENT_ORDER_NEWEST_FIRST);
+        $default = variable_get('comment_default_order_'. $node->type, COMMENT_ORDER_OLDEST_FIRST);
         break;
       case 'comments_per_page':
         $default = variable_get('comment_default_per_page_'. $node->type, 50);
@@ -311,29 +526,105 @@ function _slashcomments_get_display_setting($setting, $node) {
  * Determine whether a given user can vote on a given comment
  */
 function slashcomments_user_can_vote($uid, $cid) {
-  $can_vote = FALSE;
 
-  if (user_access('moderate comments')) {
-    if (!votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid))) {
-      $can_vote = !slashcomments_user_participating_in_discussion($uid, $cid);
+  if (user_access('administer')) {
+    return TRUE;
+  }
+
+  // keeps the status for checks which are comment independent
+  // to avoid executing them multiple times during comment rendering
+  static $can_vote = -1;
+
+  // check user has the needed permission
+  if (!(user_access('moderate comments') && user_access('moderate comments'))) {
+    return FALSE;
+  }
+
+  if ($can_vote == 0) {
+    return FALSE;
+  }
+  if ($can_vote == -1) {
+    global $user;
+
+    // check if required days has paased for new users
+    if ($uid <> 1 && strtotime("-" . variable_get('slashcomments_limit_newbie', SLASHCOMMENTS_LIMIT_NEWBIE) . " day") < $user->created) {
+      $can_vote = 0;
+      return FALSE;
+    }
+    // check if user has the needed karma
+    if ($uid <> 1 && variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1
+            && slashcomments_get_user_karma($uid) < variable_get('slashcomments_limit_karma', SLASHCOMMENTS_LIMIT_KARMA)) {
+      $can_vote = 0;
+      return FALSE;
     }
   }
-  return $can_vote;
+  $can_vote = 1;
+
+  // check if the user has already moderated this comment
+  if (votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid))) {
+    return FALSE;
+  }
+
+  // check if user is participating in the discussion
+  $participating = slashcomments_user_participating_in_discussion($uid, $cid);
+  return !$participating;
+}
+
+/**
+ * Implementation of hook_preprocess_author_pane().
+ */
+function slashcomments_preprocess_author_pane(&$variables) {
+  $tpl_file = $variables['template_files'][count($variables['template_files'])-1];
+
+  // Replace the template file with the version provided by slashcomments
+  if (module_exists('advanced_forum')) {
+    if ($tpl_file == 'advf-author-pane') {
+      if (strpos(advanced_forum_get_current_style(), 'stacked') == FALSE) {
+        $variables['template_files'][] = "slashcomments-advf-author-pane";
+      }
+      else {
+        $variables['template_files'][] = "slashcomments-advf-author-pane-stacked";
+      }
+    }
+  }
+  else {
+    $variables['template_files'][] = "slashcomments-author-pane";
+  }
+
+  // Add karma to template variables
+  $variables['slashcomments_karma'] = slashcomments_get_user_karma($variables['account']->uid);
 }
 
 /**
  * Check whether user is participating in a given discussion
  */
 function slashcomments_user_participating_in_discussion($uid, $cid) {
-  // get nid of the discussion
-  $nid = db_result(db_query("SELECT nid FROM {comments} WHERE cid=%d AND uid=%d", $cid, $uid));
-  // get user's comments with nid
-  $user_cid = db_result(db_query("SELECT cid FROM {comments} WHERE nid=%d AND uid=%d", $nid, $uid));
-  if ($user_cid) {
-    return TRUE;
+  // keeps this variable to avoid executing all the checks during
+  // multiple comments rendering
+  static $participating = -1;
+
+  // result has already been estabilished return it
+  if ($participating != -1) {
+    return $participating;
+  }
+  if (variable_get('slashcomments_limit_takepart', SLASHCOMMENTS_LIMIT_TAKEPART) == 1) {
+    // get nid of the discussion
+    $result = db_query("SELECT n.nid, n.uid FROM {comments} c, {node} n WHERE c.cid=%d AND c.nid = n.nid", $cid);
+
+    $node_info = db_fetch_array($result);
+    if ($node_info['uid'] == $uid) {
+      return TRUE;
+    }
+
+    // get user's comments with nid
+    $user_cid = db_result(db_query("SELECT count(*) FROM {comments} WHERE nid=%d AND uid=%d", $node_info['nid'], $uid));
+    $participating = ($user_cid == 0) ? 0 : 1;
+    return (boolean)$participating;
   }
   else {
-    return FALSE;
+    // get nid of the discussion
+    $nid = db_result(db_query("SELECT count(*) FROM {comments} WHERE cid=%d AND uid=%d", $cid, $uid));
+    return ($nid == 0) ? FALSE : TRUE;
   }
 }
 
@@ -367,58 +658,355 @@ function slashcomments_moderation_form($form_state, $cid, $uid) {
   return $form;
 }
 
+/**
+ * Theme the moderation form
+ */
 function theme_slashcomments_moderation_form($form) {
-  $output = '<div class="sdot_container"><div class="container-inline">';
-  $output .= '<div class="sdot_form">' . drupal_render($form) . '</div>';
-  $output .= '<div class="sdot_loader"></div><div class="sdot_form_status"></div>';
+  $output = '<div class="scomments_container"><div class="container-inline">';
+  $output .= '<div class="scomments_form">' . drupal_render($form) . '</div>';
+  $output .= '<div class="scomments_loader"></div><div class="scomments_form_status"></div>';
   $output .= '</div></div>';
   return $output;
-}
-
-
-/**
- * Submit function for comment moderation form
- */
-function slashcomments_moderation_form_submit($form, &$form_state) {
-  $vote  = array(
-          'content_type'    => 'comment',
-          'content_id'      => $form_state['values']['cid'],
-          'value_type'      => 'option',
-          'value'           => $form_state['values']['vote'],
-  );
-  votingapi_add_votes($vote);
-  votingapi_recalculate_results('comment', $form_state['values']['cid'], TRUE);
 }
 
 /**
  * Retrieve comment rating
  */
-function slashcomments_get_comment_rating($cid ,$uid) {
-  $results = votingapi_select_results(array('content_type'=>'comment', 'content_id'=>$cid));
-  $max = $results['0'];
-  $rating = $uid ? 1 : 0;
-  foreach ($results as $vote) {
-    if ($vote['value'] > $max['value']) {
-      $max = $vote;
+function slashcomments_get_comment_rating($cid, $author_id = -1) {
+  $score = SLASHCOMMENTS_DEFAULT_RATING;
+  $description = NULL;
+
+  /* get the rating information from the db */
+  $result = db_query("SELECT * FROM {slashcomments_ratings} WHERE cid = %d", $cid);
+  $db_rating = db_fetch_object($result);
+
+  // if not result is retrieved set the default rating and description value
+  if ($db_rating) {
+    $author_id = $db_rating->uid;
+    $score = $db_rating->score;
+    if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+      $score = $db_rating->score_karma;
     }
-    $func = drupal_substr($vote['function'], 7);
-    if (($func >= 1 && $func <= 4) || $func == 9) {
-      $rating -= $vote['value'];
+
+    // retrive description
+    $descriptions = _slashcomments_moderation_options();
+    if ($descriptions[$db_rating->most_rated]) {
+      $description = $descriptions[$db_rating->most_rated];
     }
-    if (($func >= 5 && $func <= 8) || $func == 10) {
-      $rating += $vote['value'];
+  }
+  else {
+    if ($author_id  == -1) {
+      $author_id = db_result(db_query("SELECT uid FROM {comment} WHERE cid = %d"), $cid);
+    }
+    // Decrease the rating by 1 if the comment has been posted by an anonymous user
+    if (!$author_id) {
+      $score--;
     }
   }
 
-  $descriptions = _slashcomments_moderation_options();
-  if ($descriptions[drupal_substr($max['function'], 7)]) {
-    $description = $descriptions[drupal_substr($max['function'], 7)];
+  // TODO: move it to an external function
+  if ($score < -1) {
+    $score = -1;
+  }
+  elseif ($score > 5) {
+    $score = 5;
   }
 
-
-  return array('rating' => $rating, 'description' => $description);
+  // return rating and description
+  return array('rating' => $score, 'description' => $description);
 }
 
+function slashcomments_get_karma_modifier($karma) {
+  if ($karma == 1) {
+    return 0;
+  }
+  if ($karma < -1) {
+    return -2;
+  }
+  if ($karma == 0) {
+    return -1;
+  }
+  if ($karma > 1) {
+    return 1;
+  }
+}
+
+/**
+ * Update rating for a given commment
+ */
+function slashcomments_update_rating($cid, $author_uid = -1) {
+  if ($author_uid == -1) {
+    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
+  }
+
+  $row = db_fetch_object($result);
+
+  $rating = slashcomments_calculate_rating($cid, $author_uid);
+
+  $rating['uid'] = $author_uid;
+  $rating['cid'] = $cid;
+  $rating['timestamp'] = time();
+
+  $exists = db_result(db_query("SELECT count(*) from {slashcomments_ratings} WHERE cid = %d", $cid));
+
+  $update = 'cid';
+  if (!$exists) {
+    $rating['karma'] = SLASHCOMMENTS_DEFAULT_KARMA;
+    $update = NULL;
+  }
+  drupal_write_record('slashcomments_ratings', $rating, $update);
+}
+
+/**
+ * Update rating for a given commment
+ */
+function slashcomments_init_rating($cid, $author_uid = -1) {
+
+  if ($author_uid == -1) {
+    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
+  }
+
+  $karma = slashcomments_get_user_karma($author_uid);
+
+  if ($karma == SLASHCOMMENTS_DEFAULT_KARMA) {
+    return;
+  }
+
+  $rating['score']       = SLASHCOMMENTS_DEFAULT_RATING;
+  $rating['score_karma'] = SLASHCOMMENTS_DEFAULT_RATING + slashcomments_get_karma_modifier($karma);
+  $rating['uid'] = $author_uid;
+  $rating['cid'] = $cid;
+  $rating['most_rated'] = -1;
+  $rating['timestamp'] = time();
+  $rating['karma'] = $karma;
+  $rating['nums_rating'] = 0;
+
+  drupal_write_record('slashcomments_ratings', $rating);
+}
+
+/**
+ * Implementation of hook_voting_api_result_alter().
+ */
+function slashcomments_calculate_rating($cid, $author_uid = -1) {
+  if ($author_uid == -1) {
+    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
+  }
+
+  $rating = array();
+
+  $sql =  "SELECT SUM(CASE WHEN 0 THEN 0 WHEN v.value IN (1,2,3,4,9) THEN -1 ELSE  1 END) score,
+           count(*) nums_rating
+          FROM {votingapi_vote} v
+          WHERE v.content_type = 'comment' AND v.content_id = %d
+          AND v.tag = 'slashcomments'";
+
+  $result = db_query($sql, $cid);
+  $row = db_fetch_object($result);
+  $rating['score'] = SLASHCOMMENTS_DEFAULT_RATING + $row->score;
+  $rating['nums_rating'] = $row->nums_rating;
+
+  $rating['most_rated'] = -1;
+  if (!$author_uid) {
+    $rating['score']--;
+  }
+  if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+    $rating['score_karma'] = $rating['score'] + slashcomments_get_karma_modifier(slashcomments_get_user_karma($author_uid));
+  }
+  else {
+    $rating['score_karma'] = $rating['score'];
+  }
+  $sql = "SELECT value, count(*) ";
+  $sql .= "FROM {votingapi_vote} v ";
+  $sql .= "WHERE v.content_type = 'comment' AND v.content_id = %d ";
+  $sql .= "AND v.value_type = 'option' AND v.tag = 'slashcomments' ";
+  $sql .= "GROUP BY value ";
+  $sql .= "ORDER BY 2 DESC, 1 ";
+
+  $res_top = db_query_range($sql, $cid, 0, 1);
+
+  while ($row = db_fetch_object($res_top)) {
+    $rating['most_rated'] = $row->value;
+  }
+
+  return $rating;
+}
+
+function slashcomments_update_karma($uid) {
+  if ($uid == 0) {
+    return;
+  }
+
+  // min and max rating considering when karma is calculated
+  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_ratings} WHERE uid = %d", $uid));;
+
+  $has_karma = slashcomments_user_has_karma($uid);
+
+  if ($comments_num < 2) {
+    if ($has_karma) {
+      db_query("DELETE FROM {slashcomments_karma} WHERE uid = %d", $uid);
+    }
+    return;
+  }
+
+  $sql =  "SELECT AVG(CASE WHEN score <  -3 THEN -3
+                           WHEN score > 5 THEN 5
+                           ELSE score END ) karma,
+           SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
+           SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
+          FROM {slashcomments_ratings} r
+          WHERE r.uid = %d
+          HAVING count(*) >= 2";
+
+  $result = db_query($sql, $uid);
+
+  $record = new stdClass();
+  $record->uid = $uid;
+  $record->timestamp = time();
+
+  while ($data = db_fetch_object($result)) {
+    $record->karma    = $data->karma;
+    $record->positive = $data->positive;
+    $record->negative = $data->negative;
+  }
+  $record->total = $comments_num;
+  $record->neutral = $record->total - $record->positive - $record->negative;
+
+  $update = ($has_karma)  ? 'uid' : NULL;
+  drupal_write_record('slashcomments_karma', $record, $update);
+}
+
+
+function slashcomments_user_has_karma($uid) {
+  $sql =  "SELECT count(*)";
+  $sql .= "FROM {slashcomments_karma} ";
+  $sql .= "WHERE uid = %d";
+
+  $has_karma = db_result(db_query($sql, $uid));
+
+  return ($has_karma) ? TRUE : FALSE;
+}
+
+function slashcomments_get_user_karma($uid) {
+  //return null;
+  $sql =  "SELECT karma
+          FROM {slashcomments_karma}
+          WHERE uid = %d";
+
+  $karma = db_result(db_query($sql, $uid));
+
+  if ($karma === FALSE) {
+
+    return SLASHCOMMENTS_DEFAULT_KARMA;
+  }
+  return $karma;
+}
+
+function slashcomments_get_user_karma_stats($uid) {
+  //return null;
+  $sql =  "SELECT *
+          FROM {slashcomments_karma}
+          WHERE uid = %d";
+
+  $result = db_query($sql, $uid);
+  if ($result === FALSE) {
+    return FALSE;
+  }
+  return db_fetch_array($result);
+}
+
+/**
+ * Implementation of hook_user().
+ *
+ */
+function slashcomments_user($op, &$edit, &$account, $category = 'account') {
+  switch ($op) {
+    case 'view':
+
+      if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 0) {
+        break;
+      }
+
+      $karma_stats = slashcomments_get_user_karma_stats($account->uid);
+      if ($karma === FALSE) {
+        return;
+      }
+      $account->content['slashcomments_karma'] = array(
+              '#type' => 'user_profile_category',
+              '#title' => t('Karma'),
+              '#weight' => 10,
+      );
+      $account->content['slashcomments_karma']['karma'] = array(
+              '#title' => t('Current value '),
+              '#type' => 'user_profile_item',
+              '#value' => $karma_stats['karma'],
+              '#weight' => 1,
+      );
+      $account->content['slashcomments_karma']['karma_total'] = array(
+              '#title' => t('Total comments'),
+              '#type' => 'user_profile_item',
+              '#value' => $karma_stats['total'],
+              '#weight' => 2,
+      );
+      $account->content['slashcomments_karma']['karma_positive'] = array(
+              '#title' => t('Positive comments'),
+              '#type' => 'user_profile_item',
+              '#value' => $karma_stats['positive'],
+              '#weight' => 3,
+      );
+      $account->content['slashcomments_karma']['karma_negative'] = array(
+              '#title' => t('Negative comments'),
+              '#type' => 'user_profile_item',
+              '#value' => $karma_stats['negative'],
+              '#weight' => 3,
+      );
+      $account->content['slashcomments_karma']['karma_neutral'] = array(
+              '#title' => t('Neutral comments'),
+              '#type' => 'user_profile_item',
+              '#type' => 'user_profile_item',
+              '#value' => $karma_stats['neutral'],
+              '#weight' => 4,
+      );
+      break;
+  }
+}
+
+
+
+function slashcomments_delete_user_comment_moderation($nid, $uid) {
+
+  $select_votes = "SELECT v.vote_id, c.cid, c.uid
+                    FROM {comments} c, {votingapi_vote} v
+                    WHERE c.cid = v.content_id
+                    AND c.nid = %d AND c.uid <> %d
+                    AND v.uid = %d and tag = 'slashcomments'
+                    ORDER BY c.uid";
+
+  $votes = db_query($select_votes, $nid, $uid, $uid);
+
+  $authors = array();
+  $votes_id = array();
+  $cids = array();
+  while ($vote = db_fetch_object($votes)) {
+    $votes_id[] = array('vote_id' => $vote->vote_id);
+    $cids[] = $vote->cid;
+    $authors[$vote->uid] = $vote->uid;
+  }
+
+  $votes = db_query($select_votes, $nid, $uid, $uid);
+
+  votingapi_delete_votes($votes_id);
+
+  while ($vote = db_fetch_object($votes)) {
+    votingapi_recalculate_results('comment', $vote->cid, TRUE);
+    slashcomments_update_rating($vote->cid, $vote->uid);
+  }
+
+  if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+    foreach ($authors as $author) {
+      slashcomments_update_karma($author);
+    }
+  }
+}
 
 function _slashcomments_moderation_options() {
   return array(
@@ -439,47 +1027,57 @@ function _slashcomments_moderation_options() {
 function _slashcomments_thresholds($node = NULL) {
   // TODO: display number of comments per each threshold
 
-  $thresholds = array(0, 2, 3, 4, 5, 6);
+  // Possible threshold value
+  $thresholds = array(-1, 1, 2, 3 , 4, 5);
   $options = array();
+
   if (!$node) {
+    // if node isn't passed to the function we're in the seetings panel
+    // for the content type no need to calculate the number of comments
     foreach ($thresholds as $i) {
-      $options[$i] = t('Threshold: !n', array('!n' => sprintf("%+d", $i - 1)));
+      $options[$i] = t('Threshold: !n', array('!n' => sprintf("%+d", $i)));
     }
   }
   else {
-    // get all comments for this node, run slashcomments_get_comment_rating($cid)
-    $comments_per_rating = array(
-            0 => 0,
-            2 => 0,
-            3 => 0,
-            4 => 0,
-            5 => 0,
-            6 => 0,
-    );
-
-    $result = db_query("SELECT cid, uid FROM {comments} WHERE nid=%d", $node->nid);
-    while ($data = db_fetch_object($result)) {
-      $rating = slashcomments_get_comment_rating($data->cid, $data->uid);
-      $comments_per_rating[$rating['rating']] = 1 + $comments_per_rating[$rating['rating']];
+    $comments_per_rating = array();
+    foreach ($thresholds as $i) {
+      $comments_per_rating[$i] = 0;
     }
 
+    $rating_field = 'score';
+    if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+      $rating_field = 'score_karma';
+    }
+
+    // get all comments for this node with corresponding rating
+    $sql = "SELECT CASE WHEN r.cid is NULL AND c.uid = 0 THEN -1 ELSE 0 END
+            + CASE WHEN " . $rating_field ." is null THEN 1 ELSE " . $rating_field . " END rating, count(*) num
+            FROM  {comments} c LEFT JOIN {slashcomments_ratings} r
+            ON c.cid = r.cid
+            WHERE c.nid = %d
+            GROUP BY CASE WHEN c.uid = 0 THEN -1 ELSE 0 END + CASE WHEN " . $rating_field ." is null THEN 1 ELSE " . $rating_field . " END";
+
+    $result = db_query($sql, $node->nid);
+
+    while ($data = db_fetch_object($result)) {
+      $comments_per_rating[$data->rating] = $data->num;
+    }
     $comments_per_rating[-1] = $node->comment_count;
+
     for ($i = 6; $i>0; $i--) {
       $comments_per_rating[$i - 1] = $comments_per_rating[$i - 1] + $comments_per_rating[$i];
     }
-
     foreach ($thresholds as $i) {
-      $options[$i] = t('!n: !s comments', array('!n' => sprintf("%+d", $i - 1), '!s' => $comments_per_rating[$i - 1]));
+      $options[$i] = t('!n: !s comments', array('!n' => sprintf("%+d", $i), '!s' => $comments_per_rating[$i]));
     }
-
   }
   return $options;
 }
 
 function _slashcomments_modes() {
   return array(
-          COMMENT_MODE_FLAT => t('Display: flat'),
-          COMMENT_MODE_THREADED => t('Display: threaded'),
+          SLASHCOMMENTS_MODE_FLAT => t('Display: flat'),
+          SLASHCOMMENTS_MODE_THREADED => t('Display: threaded'),
   );
 }
 
