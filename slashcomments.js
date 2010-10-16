@@ -7,10 +7,10 @@ Drupal.behaviors.slashcomments = function(context) {
    $('div.toggle_area').find('div.collapsed').hide().end().find('div.toggle_label').click(function() {
      $(this).next().slideFadeToggle("slow");});
 
-  $("form[@id ^= 'slashcomments-moderation-form']").submit(function() {
+  $("form[id^='slashcomments-moderation-form']").submit(function() {
     var vote = $(this).find('select').val()
-    var cid = $(this).find("input[@name = 'cid']").val();
-    var uid = $(this).find("input[@name = 'uid']").val();
+    var cid = $(this).find("input[name = 'cid']").val();
+    var uid = $(this).find("input[name = 'uid']").val();
     var form_id = $(this).attr('id');
 
     var moderated = function (data) {
@@ -53,10 +53,3 @@ Drupal.behaviors.slashcomments = function(context) {
   });
 
 };
-
-function slashcomments_toggle_takepart(checkbox) {
-  var toggle = $(checkbox).is(':checked');
-  alert(toggle);
-  $('#edit-slashcomments-delete-takepart').attr('disabled',!$(checkbox).is(':checked'));
-  
-}
