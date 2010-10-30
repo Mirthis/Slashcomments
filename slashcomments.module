@@ -27,7 +27,6 @@ define('SLASHCOMMENTS_LIMIT_KARMA', 0);
 // initial karma value
 define('SLASHCOMMENTS_DEFAULT_KARMA', 1);
 
-
 /**
  * Implementation of hook_init().
  */
@@ -927,7 +926,7 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
       }
 
       $karma_stats = slashcomments_get_user_karma_stats($account->uid);
-      if ($karma === FALSE) {
+     if ($karma === FALSE) {
         return;
       }
       $account->content['slashcomments_karma'] = array(
@@ -941,7 +940,7 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
               '#value' => $karma_stats['karma'],
               '#weight' => 1,
       );
-      $account->content['slashcomments_karma']['karma_total'] = array(
+      /*$account->content['slashcomments_karma']['karma_total'] = array(
               '#title' => t('Total comments'),
               '#type' => 'user_profile_item',
               '#value' => $karma_stats['total'],
@@ -965,7 +964,7 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
               '#type' => 'user_profile_item',
               '#value' => $karma_stats['neutral'],
               '#weight' => 4,
-      );
+      );*/
       break;
   }
 }

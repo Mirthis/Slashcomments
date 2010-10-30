@@ -16,7 +16,7 @@ div.toggle_area {
 
 div.non_toggle_area {
   /*background: #91CDF5;*/
-  /*#background: #FEFFAF;*/  
+  /*#background: #FEFFAF;*/
 }
 
 div.toggle_label,
@@ -42,7 +42,7 @@ div.toggle_label {
 
   border-bottom-right-radius: 5px;
   -moz-border-radius-bottomright: 5px;
-  -webkit-border-bottom-right-radius: 5px;    
+  -webkit-border-bottom-right-radius: 5px;
   cursor: pointer;
   background:#eee;
 }
@@ -76,20 +76,27 @@ div.toggle_content {
   -webkit-border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
   -moz-border-radius-bottomright: 5px;
-  -webkit-border-bottom-right-radius: 5px; 
-  border-top: 1px solid #ddd;      
-  min-height: 80px; 
+  -webkit-border-bottom-right-radius: 5px;
+  border-top: 1px solid #ddd;
+  min-height: 80px;
   height:auto !important;
-  height: 100px;  
+  height: 100px;
 }
 
 div.author {
-  float: left;
+  text-align: center;
+  #background-color: #ccc;
   height:auto !important;
-  height: 80px;  
-  min-height: 80px; 
-  width: 120px;
-  padding: 20px 0px 10px 20px;  
+  float: left;
+  width:120px;
+  padding: 20px 0px 10px 10px;
+}
+
+div.author .picture {
+  padding-right: 1em;
+  margin-left: 5%;
+  margin-right: 5%;
+  #background-color: #f00;
 }
 
 div.author img {
@@ -100,12 +107,12 @@ div.comment-content {
   background: #fff;
   border-bottom-right-radius: 5px;
   -moz-border-radius-bottomright: 5px;
-  -webkit-border-bottom-right-radius: 5px;    
+  -webkit-border-bottom-right-radius: 5px;
   border-left: 0px solid #ddd;
   height:auto !important;
-  height: 80px;  
+  height: 80px;
   margin-left: 140px;
-  min-height: 80px; 
+  min-height: 80px;
   padding: 0 10px 10px 0;
 }
 
@@ -141,6 +148,11 @@ span.scomments_info {
   float:right;
   clear:right;
   padding-left: 1em;
+}
+
+.picture {
+  float: left; /* LTR */
+  clear: left; /* LTR */
 }
 
 /*.scomments_rating {
