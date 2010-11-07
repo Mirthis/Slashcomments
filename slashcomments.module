@@ -54,7 +54,7 @@ function slashcomments_views_api() {
  * Implementation of hook_perm().
  */
 function slashcomments_perm() {
-  return array('moderate comments');
+  return array('moderate comments','administer slashcomments');
 }
 
 /**
@@ -76,7 +76,7 @@ function slashcomments_menu() {
           'title' => 'Slashcomments',
           'page callback' => 'drupal_get_form',
           'page arguments' => array('slashcomments_admin_settings'),
-          'access arguments' => array('Administer Slashcomments settings'),
+          'access arguments' => array('administer slashcomments'),
           'type' => MENU_NORMAL_ITEM,
           'file' => 'slashcomments.admin.inc',
   );
@@ -809,7 +809,14 @@ function slashcomments_calculate_rating($cid, $author_uid = -1) {
     $rating['score']--;
   }
   if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
-    $rating['score_karma'] = $rating['score'] + slashcomments_get_karma_modifier(slashcomments_get_user_karma($author_uid));
+        $init_karma = db_result(db_query("SELECT karma FROM {slashcomments_ratings} WHERE cid=%d", $cid));
+        if($init_karma === FALSE) {
+           $rating['score_karma'] = $rating['score'];
+        }
+        else {
+            //echo "karma ".$init_karma;
+            $rating['score_karma'] = $rating['score'] + slashcomments_get_karma_modifier($init_karma);
+        }
   }
   else {
     $rating['score_karma'] = $rating['score'];
