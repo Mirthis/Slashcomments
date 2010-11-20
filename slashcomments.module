@@ -719,7 +719,7 @@ function slashcomments_get_karma_modifier($karma) {
   if ($karma == 1) {
     return 0;
   }
-  if ($karma < -1) {
+  if ($karma <= -1) {
     return -2;
   }
   if ($karma == 0) {
