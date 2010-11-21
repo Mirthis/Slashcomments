@@ -793,7 +793,7 @@ function slashcomments_calculate_rating($cid, $author_uid = -1) {
 
   $rating = array();
 
-  $sql =  "SELECT SUM(CASE WHEN 0 THEN 0 WHEN v.value IN (1,2,3,4,9) THEN -1 ELSE  1 END) score,
+  $sql =  "SELECT SUM(CASE WHEN v.value = 0 THEN 0 WHEN v.value IN (1,2,3,4,9) THEN -1 ELSE  1 END) score,
            count(*) nums_rating
           FROM {votingapi_vote} v
           WHERE v.content_type = 'comment' AND v.content_id = %d
