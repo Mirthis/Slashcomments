@@ -1,4 +1,3 @@
-// $Id$
 
 Drupal.behaviors.slashcomments = function(context) {
     slashcomments_toggle_takepart();

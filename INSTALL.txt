@@ -1,4 +1,3 @@
-/* $Id$ */
 INSTALLATION
 1. Enable module.
 2. Set options at /admin/settings/slashcomments.

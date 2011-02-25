@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  * This defines views hooks for the slashcomments module.

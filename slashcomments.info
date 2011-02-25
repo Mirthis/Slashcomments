@@ -1,4 +1,3 @@
-; $Id$
 name = Slashcomments
 description = Upgrades default comment system to Slashdot comment system
 dependencies[] = comment

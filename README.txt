@@ -1,4 +1,3 @@
-/* $Id$ */
 All too often popular sites get flooded with useless comments which would be nice to hide by default from common visitors.
 There are several comment moderation methods out there, but after careful examination it becomes apparent that Slashdot comment moderation system is superior to all: http://slashdot.org/moderation.shtml
 
