@@ -327,7 +327,7 @@ function slashcomments_comment($comment, $op) {
     case 'view':
       // Add javascript and CSS File
       // TODO Move in a different place so that are not called for each comments
-      drupal_add_js(drupal_get_path('module', 'slashcomments') .'/slashcomments.js');
+      drupal_add_js(drupal_get_path('module', 'slashcomments') .'/scripts/slashcomments.js');
       drupal_add_css(drupal_get_path('module', 'slashcomments') .'/slashcomments.css');
 
       global $user;

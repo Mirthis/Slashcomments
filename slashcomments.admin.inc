@@ -9,7 +9,7 @@
  */
 function slashcomments_admin_settings() {
 
-  drupal_add_js(drupal_get_path('module', 'slashcomments') .'/slashcomments-settings.js');
+  drupal_add_js(drupal_get_path('module', 'slashcomments') .'/scripts/slashcomments-settings.js');
 
   $form['slashcomments_general'] = array(
           '#type' => 'fieldset',
