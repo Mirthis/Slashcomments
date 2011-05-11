@@ -14,6 +14,7 @@
 class views_handler_field_slashcomments_most_rated extends views_handler_field {
 
   function render($values) {
+    dsm("fuck");
     return slashcomments_rating2description($values->slashcomments_ratings_most_rated);
   }
 }

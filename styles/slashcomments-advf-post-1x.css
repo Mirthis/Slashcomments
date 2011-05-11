@@ -1,0 +1,21 @@
+div.toggle_label {
+  background:#eee;
+}
+
+div.toggle_label * {
+  color: #999;
+}
+
+div.toggle_area {
+  border: 1px solid #bbb;
+}
+
+div.own,
+div.toggle_label .own{
+  background:#fff ;
+}
+
+div.non_toggle_area .own,
+div.non_toggle_label .own {
+  background: #BFD6FF;
+}

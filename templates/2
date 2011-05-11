@@ -245,7 +245,7 @@ function slashcomments_theme_registry_alter($theme_registry) {
 /** 
  * Get the template file to use for comments
  */
-function _slashcomments_get_comment_template($used_tpl_file) {
+function _slashcomments_get_comments_template_file($used_tpl_file) {
 
   $tpl_files = array (
     "advf-forum-post"       => "slashcomments-advf-post-1x",
@@ -257,7 +257,7 @@ function _slashcomments_get_comment_template($used_tpl_file) {
 
 
 /* Retrieve the right template for comments and set it */
-function _slashcomments_set_comment_template(&$variables) {
+function _slashcomments_set_comments_template_file(&$variables) {
   static $new_tpl_file;
 
   if(empty($new_tpl_file)) {
@@ -265,14 +265,14 @@ function _slashcomments_set_comment_template(&$variables) {
     $used_tpl_file = $variables['template_files'][count($variables['template_files'])-1];
 
     // Replace the template file with the version provided by slashcomments
-    $new_tpl_file = _slashcomments_get_comment_template($used_tpl_file);
-    _slashcomments_add_comment_template_files($new_tpl_file);
+    $new_tpl_file = _slashcomments_get_template_file($used_tpl_file);
+    _slashcomments_add_files($new_tpl_file);
   }
   $variables['template_files'][] = $new_tpl_file;
 
 }
 
-function _slashcomments_add_comment_template_files($new_tpl_file) {
+function _slashcomments_add_files($new_tpl_file) {
   drupal_add_js(drupal_get_path('module', 'slashcomments') .'/scripts/slashcomments.js');
   drupal_add_css(drupal_get_path('module', 'slashcomments') .'/styles/slashcomments.css');
   drupal_add_css(drupal_get_path('module', 'slashcomments') .'/styles/' . $new_tpl_file . '.css');
@@ -282,8 +282,9 @@ function _slashcomments_add_comment_template_files($new_tpl_file) {
  * Preprocesses template variables for the comment template.
  */
 function slashcomments_preprocess_comment(&$variables) {
-  _slashcomments_set_comment_template($variables);
+  _slashcomments_set_template($variables);
   $comment = $variables['comment'];
+
   // get score and rating
   $rating = slashcomments_get_comment_rating($comment->cid, $comment->uid);
 
@@ -603,51 +604,27 @@ function slashcomments_user_can_vote($uid, $cid) {
   return !$participating;
 }
 
-
-
-/** 
- * Get the template file to use for the author pane
- */
-function _slashcomments_get_author_pane_template($used_tpl_file) {
-
-  $tpl_files = array (
-    "advf-author-pane"                    => "slashcomments-advf-author-pane-1x",
-    "advf-author-pane-stacked"             => "slashcomments-advf-author-pane-stacked-1x",
-    "advanced_forum.author-pane"          => "slashcomments-advf-author-pane-2x",
-    "advanced_forum.author-pane-stacked"  => "slashcomments-advf-author-pane-stacked-2x",
-    "author-pane"                         => "slashcomments-author-pane"
-  );
-  
-  // Replace the template file with the version provided by slashcomments
-  if (module_exists("advanced_forum") && strpos(advanced_forum_get_current_style(), 'stacked')) {
-    $used_tpl_file .= "-stacked";
-  }
-  return $tpl_files[$used_tpl_file];
-}
-
-
-/* Retrieve the right template for author_pane and set it */
-function _slashcomments_set_author_pane_template(&$variables) {
-  static $new_tpl_file;
-
-  if(empty($new_tpl_file)) {
-    // get current tpl_file
-    $used_tpl_file = $variables['template_files'][count($variables['template_files'])-1];
-
-    // Replace the template file with the version provided by slashcomments
-    $new_tpl_file = _slashcomments_get_author_pane_template($used_tpl_file);
-    drupal_add_css(drupal_get_path('module', 'slashcomments') .'/styles/' . $new_tpl_file . '.css');
-  }
-  $variables['template_files'][] = $new_tpl_file;
-}
-
-
 /**
  * Implementation of hook_preprocess_author_pane().
  */
 function slashcomments_preprocess_author_pane(&$variables) {
-  _slashcomments_set_author_pane_template($variables);
 
+  // Replace the template file with the version provided by slashcomments
+  if (module_exists('advanced_forum')) {
+    $tpl_file = $variables['template_files'][count($variables['template_files'])-1];
+    
+    if ($tpl_file == 'advf-author-pane') {
+      if (strpos(advanced_forum_get_current_style(), 'stacked') == FALSE) {
+        $variables['template_files'][] = "slashcomments-advf-author-pane";
+      }
+      else {
+        $variables['template_files'][] = "slashcomments-advf-author-pane-stacked";
+      }
+    }
+  }
+  else {
+    $variables['template_files'][] = "slashcomments-author-pane";
+  }
   // Add karma to template variables
   $variables['slashcomments_karma'] = slashcomments_get_user_karma($variables['account']->uid);
 }

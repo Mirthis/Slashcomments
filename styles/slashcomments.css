@@ -1,0 +1,50 @@
+div.toggle_area,
+div.non_toggle_area {
+  clear: both;
+  margin: 5px 0;
+  padding: 0;
+}
+
+
+div.toggle_label,
+div.non_toggle_label,
+div.toggle_label .own,
+div.non_toggle_label .own{
+  padding: 2px 5px;
+}
+
+
+div.toggle_label,
+div.toggle_label * {
+  cursor: pointer;
+}
+
+div.scomments_form {
+    white-space: nowrap;
+}
+
+div.scomments_form_status {
+    color:#999;
+    font-weight: bold;
+    border: #ccc solid 1px;
+    padding:5px;
+    margin-bottom: 5px;
+    margin-right: 5px;
+    display:none;
+}
+
+div.scomments_container {
+    height:35px;
+    margin:5px;
+}
+
+span.scomments_info {
+  float:right;
+  clear:right;
+  padding-left: 1em;
+}
+
+.picture {
+  float: left; /* LTR */
+  clear: left; /* LTR */
+}

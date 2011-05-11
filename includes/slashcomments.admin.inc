@@ -77,41 +77,6 @@ function slashcomments_admin_general() {
   return system_settings_form($form);
 }
 
-function slashcomments_admin_ratings() {
-  $form['myitems']['#tree'] = TRUE;
-
-  $form['myitems'][1] = array(
-    'name' => array (
-      '#type' => 'markup',
-      '#value' => 'test',
-    ),
-    'weight' => array(
-      '#type' => 'weight',
-      '#delta' => 10,
-      '#default_value' => 5,
-      '#attributes' => array('class' => 'weight'),
-    )
-  );
-
-  $form['myitems'][2] = array(
-    'name' => array (
-      '#type' => 'markup',
-      '#value' => 'test 2',
-    ),
-    'weight' => array(
-      '#type' => 'weight',
-      '#delta' => 5,
-      '#default_value' => 3,
-      '#attributes' => array('class' => 'weight'),
-    )
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save Changes'),
-  );
-
-  return $form;
-}
 /**
  * Implementation of admin setting  form submit function
  */
@@ -156,57 +121,4 @@ function slashcomments_calculate_karma() {
     AND a.uid <> 0";
 
   db_query($sql, $current_time);
-}
-
-
-function theme_slashcomments_admin_ratings($form) {
-
-  // the variable that will hold our form HTML output
-  $output = '';
-
-  // loop through each "row" in the table array
-  foreach($form['myitems'] as $id => $row) {
-
-    // if $id is not a number skip this row in the data structure
-    if (!intval($id))
-      continue;
-
-    // this array will hold the table cells for a row
-    $this_row = array();
-
-    // first, add the "name" markup
-    $this_row[] = drupal_render($row['name']);
-
-    // Add the weight field to the row
-    // the Javascript to make our table drag and drop will end up hiding this cell
-    $this_row[] = drupal_render($row['weight']);
-
-    //Add the row to the array of rows
-    $table_rows[] = array('data' => $this_row, 'class'=>'draggable');
-  }
-
-  // Make sure the header count matches the column count
-  $header = array(
-    'Name',
-    'Weight',
-  );
-
-  $table_id = 'myitems';
-
-  // this function is what brings in the javascript to make our table drag-and-droppable
-  drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');   
-
-  // over-write the 'my_items' form element with the markup generated from our table
-  $form['myitems'] = array(
-    '#type' => 'markup',
-    '#value' => theme('table', $header, $table_rows, array('id' => $table_id)),
-    '#weight' => '1',
-  );
-
-  // render the form
-  // note, this approach to theming the form allows you to add other elements in the method
-  // that generates the form, and they will automatically be rendered correctly
-  $output = drupal_render($form);
-
-  return $output;
 }
