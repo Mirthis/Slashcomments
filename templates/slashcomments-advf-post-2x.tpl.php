@@ -77,7 +77,7 @@
       <span class="unpublished-post-note"><?php print t("Unpublished post") ?></span>
     <?php endif; ?>
 
-    <span class="forum-post-number"><?php print $post_link; ?></span>
+    <span class="forum-post-number"><?php print $comment_link . ' ' . $page_link; ?></span>
   </div> <?php // End of post info div ?>
 
   <div class="<?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">

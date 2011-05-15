@@ -1,11 +1,15 @@
 div.toggle_label {
+  color: #999;
   background:#eee;
   background: -webkit-gradient(linear, left top, left bottom, to(#eee), from(#bbb));
   background: -moz-linear-gradient(top, #bbb, #eee);
 }
 
-div.toggle_label * {
-  color: #999;
+div.non_toggle_label {
+  color: #fff;
+  background:#58B3ED;
+  background: -webkit-gradient(linear, left top, left bottom, from(#2587C4), to(#58B3ED));
+  background: -moz-linear-gradient(top, #2587C4, #58B3ED);
 }
 
 div.toggle_area {

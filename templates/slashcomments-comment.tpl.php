@@ -48,7 +48,6 @@
     print $picture;
     } ?>
     <?php print $author ?>
-    
     </div>  
 
     <div class="comment-content">

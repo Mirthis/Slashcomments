@@ -649,7 +649,9 @@ function slashcomments_preprocess_author_pane(&$variables) {
   _slashcomments_set_author_pane_template($variables);
 
   // Add karma to template variables
-  $variables['slashcomments_karma'] = slashcomments_get_user_karma($variables['account']->uid);
+  if (variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1) {
+    $variables['slashcomments_karma'] = slashcomments_get_user_karma($variables['account']->uid);
+  }
 }
 
 /**
@@ -988,10 +990,8 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
       break;
     }
 
-    $karma_stats = slashcomments_get_user_karma_stats($account->uid);
-    if ($karma === FALSE) {
-      return;
-    }
+    $user_karma = slashcomments_get_user_karma($account->uid);
+
     $account->content['slashcomments_karma'] = array(
       '#type' => 'user_profile_category',
       '#title' => t('Karma'),
@@ -1000,7 +1000,7 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
     $account->content['slashcomments_karma']['karma'] = array(
       '#title' => t('Current value '),
       '#type' => 'user_profile_item',
-      '#value' => $karma_stats['karma'],
+      '#value' => $user_karma,
       '#weight' => 1,
     );
       /*$account->content['slashcomments_karma']['karma_total'] = array(
