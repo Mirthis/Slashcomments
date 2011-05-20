@@ -82,7 +82,7 @@ function slashcomments_admin_general() {
  */
 function slaschomments_admin_general_submit($form, &$form_state) {
   if ($form_state['values']['slashcomments_enable_karma'] == 1) {
-    slashcomments_calculate_karma();
+    slashcomments_recalculate_karma();
   }
   else {
     $form_state['values']['slashcomments_limit_karma'] = variable_get('slashcomments_limit_karma', SLASHCOMMENTS_LIMIT_KARMA);
@@ -92,7 +92,7 @@ function slaschomments_admin_general_submit($form, &$form_state) {
 /*
  * Calculate karma for all users when when the enable karma option is set
  */
-function slashcomments_calculate_karma() {
+function slashcomments_recalculate_karma() {
 
   // Erase all karma values previuosly stored
   db_query("TRUNCATE TABLE {slashcomments_karma}");
@@ -111,8 +111,9 @@ function slashcomments_calculate_karma() {
     SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
     SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
     FROM {slashcomments_ratings} r
+    WHERE r.nums_rating <> 0
     GROUP BY uid
-    HAVING count(*) >= 10) a,
+    HAVING count(*) >= 5) a,
       (SELECT uid, count(*) total, max(%d) timestamp
       FROM {comments}
       GROUP BY uid

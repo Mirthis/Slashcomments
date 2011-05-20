@@ -853,7 +853,7 @@ function slashcomments_calculate_rating($cid, $author_uid = -1) {
 
   $rating = array();
 
-  $sql =  "SELECT SUM(CASE WHEN 0 THEN 0 WHEN v.value IN (1,2,3,4,9) THEN -1 ELSE  1 END) score,
+  $sql =  "SELECT SUM(CASE WHEN v.value = 0 THEN 0 WHEN v.value IN (1,2,3,4,9) THEN -1 ELSE  1 END) score,
     count(*) nums_rating
     FROM {votingapi_vote} v
     WHERE v.content_type = 'comment' AND v.content_id = %d
@@ -881,10 +881,14 @@ function slashcomments_calculate_rating($cid, $author_uid = -1) {
   else {
     $rating['score_karma'] = $rating['score'];
   }
+
+  $rating_filter = $rating['score_karma'] < 1 ? "1,2,3,4,9" : "0,5,6,7,8,10";
+
   $sql = "SELECT value, count(*), max(v.timestamp)";
   $sql .= "FROM {votingapi_vote} v ";
   $sql .= "WHERE v.content_type = 'comment' AND v.content_id = %d ";
   $sql .= "AND v.value_type = 'option' AND v.tag = 'slashcomments' ";
+  $sql .= "AND v.value IN (".$rating_filter.") ";
   $sql .= "GROUP BY value ";
   $sql .= "ORDER BY 2 DESC, 3 DESC, 1";
 
@@ -907,7 +911,7 @@ function slashcomments_update_karma($uid) {
 
   $has_karma = slashcomments_user_has_karma($uid);
 
-  if ($comments_num < 2) {
+  if ($comments_num < 5) {
     if ($has_karma) {
       db_query("DELETE FROM {slashcomments_karma} WHERE uid = %d", $uid);
     }
@@ -921,10 +925,11 @@ function slashcomments_update_karma($uid) {
       SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
       FROM {slashcomments_ratings} r
       WHERE r.uid = %d
-      HAVING count(*) >= 2";
+        AND r.nums_rating <> 0
+      HAVING count(*) >= 5";
+
 
   $result = db_query($sql, $uid);
-
   $record = new stdClass();
   $record->uid = $uid;
   $record->timestamp = time();
