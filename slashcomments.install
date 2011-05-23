@@ -110,6 +110,260 @@ function slashcomments_schema() {
           ),
   );
 
+/*$schema['slashcomments_votes'] = array(
+  'description' => t('TODO: please describe this table!'),
+  'fields' => array(
+    'vote_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'content_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'content_type' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '45',
+      'not null' => TRUE,
+      'default' => 'comment',
+    ),
+    'rating_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'uid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'created' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('vote_id'),
+  'indexes' => array(
+    'idx_content_id' => array('content_id'),
+    'idx_rating_id' => array('rating_id'),
+    'idx_uid' => array('uid'),
+  ),
+);*/
+
+  $schema['slashcomments_users_karma'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'uid' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'karma' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'total' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => FALSE,
+          ),
+        'positive' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'negative' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'neutral' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'created' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('uid'),
+        'indexes' => array(
+            'karma' => array('karma'),
+            ),
+        );
+
+  $schema['slashcomments_rating_options'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'rating_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'serial',
+          'not null' => TRUE,
+          ),
+        'rating' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'varchar',
+          'length' => '40',
+          'not null' => TRUE,
+          ),
+        'score' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'weight' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'enabled' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'size' => 'tiny',
+            'not null' => TRUE,
+            ),
+        'created' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('rating_id'),
+        );
+
+  $schema['slashcomments_karma_modifier'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'karma_mod_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'serial',
+          'not null' => TRUE,
+          ),
+        'karma_from' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'karma_to' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => FALSE,
+          ),
+        'modifier' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'created' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('karma_mod_id'),
+        );
+
+  $schema['slashcomments_contents_rating'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'content_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'uid' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'score' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'most_rated_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'num_ratings' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'created' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('content_id'),
+        'indexes' => array(
+            'idx_uid' => array('uid'),
+            ),
+        );
+
+  $schema['slashcomments_contents_karma'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'content_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'karma' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'modifier' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'created' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('content_id'),
+        );
+
+
+
   return $schema;
 }
 
@@ -148,12 +402,12 @@ function slashcomments_init_settings() {
   // for each content types override variables set by the comment module
   // with value supported by slashcomments
   foreach ($types as $t) {
-      if (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_THREADED_COLLAPSED) {
-        variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED);
-      }
-      elseif (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_FLAT_COLLAPSED) {
-          variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_FLAT_EXPANDED);
-      }
-      variable_set('comment_default_order_'. $t->type, COMMENT_ORDER_OLDEST_FIRST);
+    if (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_THREADED_COLLAPSED) {
+      variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED);
+    }
+    elseif (variable_get('comment_default_mode_'. $t->type, COMMENT_MODE_THREADED_EXPANDED) == COMMENT_MODE_FLAT_COLLAPSED) {
+      variable_set('comment_default_mode_'. $t->type, COMMENT_MODE_FLAT_EXPANDED);
+    }
+    variable_set('comment_default_order_'. $t->type, COMMENT_ORDER_OLDEST_FIRST);
   }
 }
