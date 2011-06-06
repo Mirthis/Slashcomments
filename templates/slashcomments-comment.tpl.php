@@ -38,8 +38,7 @@
        <span class="new"><?php print $new; ?></span>
       <?php endif; ?>
       <b><?php print $comment->subject ?></b>
-      <span class="scomments_rating"><?php print $rating ?></span>
-
+      <?php print $slashcomments_rating ?> 
    </div>
   
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
@@ -51,7 +50,9 @@
     </div>  
 
     <div class="comment-content">
-     <?php print $content; ?>
+     <?php print $content ?>
+        <?php print $slashcomments_form ?>
+        <?php // print $slashcomments_Status ?> 
       <div class="clear clear-block"></div>     
       <div class="meta">
         <div class="links"><?php print $links; ?></div>

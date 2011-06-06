@@ -64,8 +64,8 @@
   <div class="forum-post-info clear-block <?php print $toggle_label ?>">
     <div class="forum-posted-on">
       <?php print $date ?>
-      <span class="scomments_rating"><b><?php print $rating ?></b></span>
-      <?php print $new_marker ?>
+      <?php print $slashcomments_rating ?>
+     <?php print $new_marker ?>
     </div>
 
     <?php if (!empty($in_reply_to)): ?>
@@ -97,6 +97,7 @@
 
         <div class="forum-post-content">
           <?php print $content ?>
+          <?php print $slashcomments_form ?>
         </div>
 
         <?php if (!empty($post_edited)): ?>
@@ -128,9 +129,9 @@
 </div> <?php // End of main wrapping div ?>
 
 <?php
-// Print the taxonomy terms for this node. This will print all terms,
-// including the term of the forum itself. If you don't use any other
-// taxonomy on forum posts, you can safely delete this section.
+  // Print the taxonomy terms for this node. This will print all terms,
+  // including the term of the forum itself. If you don't use any other
+  // taxonomy on forum posts, you can safely delete this section.
 ?>
 <?php if ($top_post): ?>
   <div class="forum-top-post-footer">

@@ -6,8 +6,8 @@ Drupal.behaviors.slashcomments = function(context) {
   $('div.toggle_area').find('div.collapsed').hide().end().find('div.toggle_label').click(function() {
     $(this).next().slideFadeToggle("slow");
   });
-  /*
-  $("form[id^='slashcomments-moderation-form']").submit(function() {
+
+  /*$("form[id^='slashcomments-moderation-form']").submit(function() {
     var vote = $(this).find('select').val()
     var cid = $(this).find("input[name = 'cid']").val();
     var uid = $(this).find("input[name = 'uid']").val();
@@ -19,7 +19,7 @@ Drupal.behaviors.slashcomments = function(context) {
       $(form_obj).find('div.scomments_loader').empty();
 
       $(form_obj).find('div.scomments_form').slideToggle(300, function(){
-        $(form_obj).find('div.scomments_form_status').html(data.status).slideDown(300);
+        $(form_obj).find('div.scomments_form_status').html(data.message).slideDown(300);
       });
 
       if($('#comment-'+cid).length != 0) {
@@ -31,6 +31,10 @@ Drupal.behaviors.slashcomments = function(context) {
         $('#post-'+cid).find('.scomments_rating').fadeOut("slow", function() {
           $(this).empty().html(data.rating).fadeIn();
         });
+      }
+
+      if(data.hide_forms) {
+        $("form[id^='slashcomments-moderation-form']").fadeOut();
       }
     }
 

@@ -44,7 +44,7 @@
   <div class="post-info clear-block <?php print $toggle_label ?>">
     <div class="posted-on">
       <?php print $date ?>
-      <span class="scomments_rating"><b><?php print $rating ?></b></span>
+      <?php print $slashcomments_rating ?>
       <?php if (!$top_post && !empty($comment->new)): ?>
         <a id="new"><span class="new">(<?php print $new ?>)</span></a>
       <?php endif; ?>
@@ -70,6 +70,7 @@
 
       <div class="content">
         <?php print $content ?>
+        <?php print $slashcomments_form ?>
       </div>
 
       <?php if ($signature): ?>

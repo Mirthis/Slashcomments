@@ -10,7 +10,7 @@ div.toggle_label,
 div.non_toggle_label,
 div.toggle_label .own,
 div.non_toggle_label .own{
-  padding: 2px 5px;
+  padding: 5px 5px;
 }
 
 
@@ -47,4 +47,12 @@ span.scomments_info {
 .picture {
   float: left; /* LTR */
   clear: left; /* LTR */
+}
+
+.scomments_rating .help_icon {
+  padding: 0px 3px;
+  margin: 0px;
+  margin-bottom:-4px;
+  width: 18px;
+
 }
