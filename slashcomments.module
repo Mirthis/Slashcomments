@@ -30,8 +30,12 @@ define('SLASHCOMMENTS_DEFAULT_KARMA', 1);
 define('SLASHCOMMENTS_RATINGS_FOR_KARMA', 10);
 // numbers of moderation per day
 define('SLASHCOMMENTS_MOD_PER_DAY',10);
-
+// default path for the help page
 define('SLASHCOMMENTS_HELP_PAGE_PATH','slashcomments/help');
+// Lower score valid for karma
+define('SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA', -6);
+// Higher score valid for karma
+define('SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA', 8);
 
 /**
  * Implementation of hook_views_api().
@@ -951,6 +955,9 @@ function slashcomments_update_karma($uid) {
   // min and max rating considering when karma is calculated
   $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d", $uid));
   $comments_for_karma = _slashcomments_get_ratings_for_karma();
+  $lowest_for_karma = _slashcomments_get_lowest_score_for_karma();
+  $highest_for_karma = _slashcomments_get_highest_score_for_karma();
+
   $has_karma = slashcomments_user_has_karma($uid);
   if ($comments_num < $comments_for_karma) {
     if ($has_karma) {
@@ -959,8 +966,8 @@ function slashcomments_update_karma($uid) {
     return;
   }
 
-  $sql =  "SELECT AVG(CASE WHEN score <  -3 THEN -3
-    WHEN score > 5 THEN 5
+  $sql =  "SELECT AVG(CASE WHEN score <  %d THEN %d
+    WHEN score > %d THEN %d
     ELSE score END ) karma,
       SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
       SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
@@ -968,7 +975,7 @@ function slashcomments_update_karma($uid) {
       WHERE r.uid = %d
       HAVING count(*) >= %d";
 
-  $result = db_query($sql, $uid, $comments_for_karma);
+  $result = db_query($sql, $lowest_for_karma, $lowest_for_karma, $highest_for_karma, $highest_for_karma,$uid, $comments_for_karma);
   $record = db_fetch_object($result);
   $record->uid = $uid;
   $record->total = $comments_num;
@@ -1234,6 +1241,16 @@ function _slashcomments_get_mod_per_day() {
 /* get values of the help_page_path settings variable */
 function _slashcomments_get_help_page_path() {
   return variable_get('slashcomments_help_page_path',SLASHCOMMENTS_HELP_PAGE_PATH);
+}
+
+/* get values of the lowest rating for karma settings variable */
+function _slashcomments_get_lowest_score_for_karma() {
+  return variable_get('slashcomments_lowest_score_for_karma',SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA);
+}
+
+/* get values of the highest rating for karma settings variable */
+function _slashcomments_get_highest_score_for_karma() {
+  return variable_get('slashcomments_highest_score_for_karma',SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA);
 }
 
 /* get the url of slashcomments images folder */

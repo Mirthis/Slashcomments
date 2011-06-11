@@ -7,7 +7,7 @@ Drupal.behaviors.slashcomments = function(context) {
     $(this).next().slideFadeToggle("slow");
   });
 
-  /*$("form[id^='slashcomments-moderation-form']").submit(function() {
+  $("form[id^='slashcomments-moderation-form']").submit(function() {
     var vote = $(this).find('select').val()
     var cid = $(this).find("input[name = 'cid']").val();
     var uid = $(this).find("input[name = 'uid']").val();
@@ -61,6 +61,6 @@ Drupal.behaviors.slashcomments = function(context) {
       success: moderated
     })
     return false;
-  });*/
+  });
 
 };
