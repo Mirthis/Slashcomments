@@ -23,7 +23,7 @@ div.scomments_form {
     white-space: nowrap;
 }
 
-div.scomments_form_status {
+/*div.scomments_form_status {
     color:#999;
     font-weight: bold;
     border: #ccc solid 1px;
@@ -31,6 +31,10 @@ div.scomments_form_status {
     margin-bottom: 5px;
     margin-right: 5px;
     display:none;
+}*/
+
+div.scomments_form_status .messages {
+  display:block;
 }
 
 div.scomments_container {

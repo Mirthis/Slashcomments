@@ -33,6 +33,8 @@ Drupal.behaviors.slashcomments = function(context) {
         });
       }
 
+      alert(data.hide_forms);
+
       if(data.hide_forms) {
         $("form[id^='slashcomments-moderation-form']").fadeOut();
       }
