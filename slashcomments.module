@@ -149,8 +149,12 @@ function slashcomments_theme() {
     'path' => drupal_get_path('module', 'slashcomments') . '/templates',
   );
 
-  $items['slashcomments_moderation_form'] = array(
+ $items['slashcomments_moderation_form'] = array(
     'arguments' => array('form' => NULL),
+  );
+
+  $items['slashcomments_moderation_formdiv'] = array(
+    'arguments' => array('cid' => null, 'uid' => null),
   );
 
   $items['slashcomments_admin_ratings_form'] = array(
@@ -416,9 +420,11 @@ function slashcomments_preprocess_comment(&$variables) {
 
   $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
   $can_vote = slashcomments_user_can_vote($user->uid, $comment->cid);
+
   // Hide moderation module if user can't moderate or is on the edit or reply page
   if (!$reply && $can_vote['result'] == 1) {
     $variables['slashcomments_form'] = drupal_get_form('slashcomments_moderation_form', $comment->cid, $comment->uid);
+    //$variables['slashcomments_form'] = theme('slashcomments_moderation_formdiv', $comment->cid, $comment->uid);
   }
 
   // get default threshold for the content type
@@ -882,17 +888,30 @@ function slashcomments_moderation_form($form_state, $cid, $uid) {
 }
 
 
-
-/**
- * Theme the moderation form
- */
 function theme_slashcomments_moderation_form($form) {
   $output = '<div class="scomments_container"><div class="container-inline">';
   $output .= '<div class="scomments_form">' . drupal_render($form) . '</div>';
-  $output .= '<div class="scomments_loader"></div><div class="scomments_form_status"></div>';
+  $output .= '<div class="scomments_loader"></div><div class="scomments_form_status description">' . $form['status'] . '</div>';
   $output .= '</div></div>';
   return $output;
 }
+
+/*
+function theme_slashcomments_moderation_form($form) {
+  $output .= '<div class="scomments_form">' . drupal_render($form) . '</div>';
+  return $output;
+}*/
+/**
+ * Theme the moderation form
+ */
+/*
+function theme_slashcomments_moderation_formdiv($cid, $uid) {
+  $output = '<div class="scomments_container"><div class="container-inline">';
+  $output .= '<div class="scomments_form">' .  drupal_get_form('slashcomments_moderation_form', $cid, $uid) . '</div>';
+  $output .= '<div class="scomments_loader"></div><div class="scomments_form_status description">' . $form['status'] . '</div>';
+  $output .= '</div></div>';
+  return $output;
+}*/
 
 /**
  * Retrieve comment rating

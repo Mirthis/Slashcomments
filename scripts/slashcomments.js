@@ -1,3 +1,4 @@
+
 jQuery.fn.slideFadeToggle = function(speed, easing, callback) {
   return this.animate({opacity: 'toggle', height: 'toggle'}, speed, easing, callback); 
 };
@@ -33,8 +34,6 @@ Drupal.behaviors.slashcomments = function(context) {
         });
       }
 
-      alert(data.hide_forms);
-
       if(data.hide_forms) {
         $("form[id^='slashcomments-moderation-form']").fadeOut();
       }
@@ -62,6 +61,7 @@ Drupal.behaviors.slashcomments = function(context) {
       error:  error_handler,
       success: moderated
     })
+
     return false;
   });
 
