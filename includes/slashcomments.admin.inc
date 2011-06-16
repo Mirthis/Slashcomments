@@ -50,7 +50,9 @@ function slashcomments_admin_general_form() {
     '#title' => t('Daily moderation per user'),
     '#size' => 5,
     '#default_value' => _slashcomments_get_mod_per_day(),
-    '#description' => t('Number of comments that a single moderator can moderate during the same day'),
+    '#description' => t('Number of comments that a single moderator can moderate during the same day. 
+    A 0 value imply that user can\'t moderate. A !infinite value imply that users has infinite mod points',
+    array('!infinite' => SLASHCOMMENTS_INFINITE_MOD_POINTS)),
   );
 
   $form['slashcomments_general']['slashcomments_limit_takepart'] = array(

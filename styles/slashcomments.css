@@ -68,4 +68,5 @@ span.scomments_info {
 
 #center .comment-content form {
   margin-bottom:0px;
+  display:inline;
 }
