@@ -488,7 +488,6 @@ function slashcomments_comment_view($comment, $node, $links = array(), $visible 
   // Comment API hook
   comment_invoke_comment($comment, 'view');
   $output .= theme('comment', $comment, $node, $links);
-  $output .= '<script>slashcomments_init_comment(' . $comment->cid . ')</script>';
   return $output;
 }
 

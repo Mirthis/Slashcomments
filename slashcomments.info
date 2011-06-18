@@ -2,6 +2,7 @@ name = Slashcomments
 description = Upgrades default comment system to Slashdot comment system
 dependencies[] = comment
 dependencies[] = votingapi
+dependencies[] = jquery_update
 core = 6.x
 
 ; Information added by drupal.org packaging script on 2009-09-11

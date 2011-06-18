@@ -30,7 +30,7 @@
   }
 ?>
 
-<div class="<?php print $toggle_area ?>" id="comment-<?php print $comment->cid; ?>">
+<div class="comment <?php print $toggle_area ?>" id="comment-<?php print $comment->cid; ?>">
   <div class=" <?php print $toggle_label ?>">
        <span class="scomments_info"><?php print $date . " | " . $comment_link . ' ' . $page_link; ?></span>
 
