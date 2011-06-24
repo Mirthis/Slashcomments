@@ -236,6 +236,7 @@ function slashcomments_admin_ratings_form_submit($form, &$form_state) {
   $stored_only = array_diff_assoc($stored_options, $posted_options);
 
   foreach($ids as $id) {
+    $posted_options[$id]['enable'] = '' . $posted_options['enable'];
     if(array_diff($posted_options[$id], $stored_options[$id])) {
       $sql = "UPDATE {slashcomments_rating_options}
         SET rating = '%s', score = %d, enabled = %d, weight = %d
@@ -391,7 +392,7 @@ function slashcomments_update_all_karma() {
     'error_message' => t('Karma update has encountered an error.'),
     'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
   );
-  
+
   batch_set($batch);
 }
 
@@ -405,7 +406,7 @@ function slashcomments_update_all_ratings() {
     'error_message' => t('Rating update has encountered an error.'),
     'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
   );
-  
+
   batch_set($batch);
 }
 
@@ -419,6 +420,6 @@ function slashcomments_migrate_old_data() {
     'error_message' => t('Data migration has encountered an error.'),
     'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
   );
-  
+
   batch_set($batch);
 }

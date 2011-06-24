@@ -40,12 +40,11 @@
       <b><?php print $comment->subject ?></b>
       <?php print $slashcomments_rating ?> 
    </div>
-  
+
+  <?php if($collapsed != 'collapsed') : ?>
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
     <div class="author">
-    <?php if ($picture) {
-    print $picture;
-    } ?>
+    <?php if ($picture) print $picture; ?>
     <?php print $author ?>
     </div>  
 
@@ -59,6 +58,6 @@
       </div>
       <?php if ($signature): ?><div class="user-signature"><?php print $signature ?></div><?php endif; ?>
     </div>
-    
   </div>
+<?php endif; ?>  
 </div>

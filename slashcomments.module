@@ -40,6 +40,11 @@ define('SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA', -6);
 // Higher score valid for karma
 define('SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA', 8);
 
+
+function slashcomments_init() {
+ //slashcomments_load_comment(1070);
+}
+
 /**
  * Implementation of hook_views_api().
  */
@@ -62,10 +67,18 @@ function slashcomments_menu() {
   $items = array();
 
   // Add the callback for AJAX moderation
-  $items['slashdot/moderate'] = array(
+  $items['slashcomments/moderate'] = array(
     'title' => 'Slashcomments - AJAX moderation',
-    'page callback' => 'slashdotcomments_moderate',
+    'page callback' => 'slashcomments_moderate',
     'access callback' => 'slashcomments_moderate_access',
+    'type' => MENU_CALLBACK,
+  );
+
+  // Add the callback for loading comment with AJAX
+  $items['slashcomments/load_comment'] = array(
+    'title' => 'Slashcomments - AJAX commet loading',
+    'page callback' => 'slashcomments_load_comment',
+    'access arguments' => array('access comments'),
     'type' => MENU_CALLBACK,
   );
 
@@ -184,10 +197,35 @@ function slashcomments_moderate_access() {
 }
 
 /**
+ * Implemente the callback for slashdot/load_comment menu entry responsible
+ * of loading a single comment through AJAX
+ */
+function slashcomments_load_comment() {
+  if (empty($_POST['js']) || !is_numeric($_POST['cid'])) {
+      return;
+    }
+
+  global $ignore_threshold;
+$ignore_threshold = 1;
+
+  $nid = db_result(db_query("SELECT nid FROM {comments} WHERE cid = %d", $_POST['cid']));
+  if(!$nid) return;
+
+  $node = node_load($nid);
+  $out = comment_render($node, $_POST['cid']);
+  // Set variable to be used by ajax success hander
+  drupal_json(array(
+    'status' => 'OK',
+    'message' => $out,
+  ));
+  exit();
+}
+
+/**
  * Implemente the callback for slashdot/moderate menu entry responsible
  * of hnandling AJAX modration
  */
-function slashdotcomments_moderate() {
+function slashcomments_moderate() {
   global $user;
 
   // Check needed variable has been sent
@@ -277,8 +315,8 @@ function slashcomments_store_vote($cid, $vote) {
 /* Theming function for slashcomments_rating. Used to display
  * the score and rating of each comment */
 function theme_slashcomments_rating($rating) {
-  $icon_url = _slashcomments_get_image_url() . '/question_mark.png';
-  $icon_url_2 = _slashcomments_get_image_url() . '/forbidden.png';
+  $icon_url = _slashcomments_get_image_path() . '/question_mark.png';
+  $icon_url_2 = _slashcomments_get_image_path() . '/forbidden.png';
   $help_page = url(_slashcomments_get_help_page_path());
 
   $output = '<span class="scomments_rating">';
@@ -394,7 +432,7 @@ function _slashcomments_add_comment_template_files($new_tpl_file) {
     array(
       'baseUrl'  => $GLOBALS['base_url'],
       'slashdot' => array('error_status' => t("Error moderationg comment"),
-      'load_image_path' => _slashcomments_get_image_url() . '/loading.gif')
+      'load_image_path' => _slashcomments_get_image_path() . '/loading.gif')
     ),
     'setting'
   );
@@ -408,7 +446,7 @@ function _slashcomments_add_comment_template_files($new_tpl_file) {
  * Preprocesses template variables for the comment template.
  */
 function slashcomments_preprocess_comment(&$variables) {
-  global $user;
+  global $user, $ignore_threshold;
 
   $comment = $variables['comment'];
   if(!$comment->cid) {
@@ -431,7 +469,7 @@ function slashcomments_preprocess_comment(&$variables) {
   }
 
   // get default threshold for the content type
-  $threshold = _slashcomments_get_display_setting('threshold', $variables['node']);
+  $threshold = ($ignore_threshold) ? -1 : _slashcomments_get_display_setting('threshold', $variables['node']);
 
   // fill out template variables
   if ($rating['score'] >= $threshold) {
@@ -456,8 +494,8 @@ function slashcomments_preprocess_comment(&$variables) {
 
   $fragment = 'comment-' . $variables['comment']->cid;
   $query = ($page_number) ? 'page=' . $page_number : NULL;
-  $img_path = drupal_get_path('module', 'slashcomments') . '/images';
-  $linktext = '<img src="' . url($img_path) . '/permalink.gif" />';
+  $img_path = _slashcomments_get_image_path();
+  $linktext = '<img src="' . $img_path . '/permalink.gif" />';
   $linkpath = 'node/' . $variables['node']->nid;
   $variables['comment_link'] = l($linktext, $linkpath, array('query' => $query, 'fragment' => $fragment, 'html' => TRUE));
 
@@ -1377,13 +1415,12 @@ function _slashcomments_get_highest_score_for_karma() {
 }
 
 /* get the url of slashcomments images folder */
-function _slashcomments_get_image_url() {
-  static $image_url;
-
-  if(!$image_url) {
-    $image_url = url(drupal_get_path('module', 'slashcomments') . '/images');
+function _slashcomments_get_image_path() {
+  static $image_path;
+  if(!$image_path) {
+    $image_path = $GLOBALS['base_url'].'/'.drupal_get_path('module', 'slashcomments') . '/images';
   }
-  return $image_url;
+  return $image_path;
 }
 
 function slashcomments_get_user_mod_points($uid) {

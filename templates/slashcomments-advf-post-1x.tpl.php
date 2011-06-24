@@ -54,26 +54,27 @@
       <span class="post-num"><?php print $comment_link . ' ' . $page_link; ?></span>
     <?php endif; ?>
   </div>
-  <div class="<?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
-  <div class="forum-post-wrapper">
+  <?php if($collapsed != 'collapsed') : ?>
+  <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
+    <div class="forum-post-wrapper">
 
-    <div class="forum-post-panel-sub">
-      <?php print $author_pane; ?>
-    </div>
-
-    <div class="forum-post-panel-main clear-block">
-      <?php if ($title && !$top_post): ?>
-        <div class="post-title">
-          <?php print $title ?>
-        </div>
-      <?php endif; ?>
-
-      <div class="content">
-        <?php print $content ?>
-        <?php print $slashcomments_form ?>
+      <div class="forum-post-panel-sub">
+        <?php print $author_pane; ?>
       </div>
 
-      <?php if ($signature): ?>
+      <div class="forum-post-panel-main clear-block">
+        <?php if ($title && !$top_post): ?>
+          <div class="post-title">
+            <?php print $title ?>
+          </div>
+        <?php endif; ?>
+
+        <div class="content">
+          <?php print $content ?>
+          <?php print $slashcomments_form ?>
+        </div>
+
+        <?php if ($signature): ?>
         <div class="author-signature">
           <?php print $signature ?>
         </div>
@@ -93,4 +94,5 @@
     <?php endif; ?>
   </div>
   </div>
+<?php endif; ?>  
 </div>

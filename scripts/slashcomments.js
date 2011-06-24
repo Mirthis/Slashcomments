@@ -1,24 +1,53 @@
 
+//var nid;
+
 jQuery.fn.slideFadeToggle = function(speed, easing, callback) {
   return this.animate({opacity: 'toggle', height: 'toggle'}, speed, easing, callback); 
 };
 
 Drupal.behaviors.slashcomments = function(context) {
-  //slashcomments_onload();
-
-  $("form[id^='slashcomments-moderation-form']").live('click', slashcomments_submit_moderation_form);
-
-  $('div.toggle_label').live('click',function() {
-    $(this).next().slideFadeToggle("slow");
-  });
+  $("form[id^='slashcomments-moderation-form']").live('submit', slashcomments_submit_moderation_form);
+  $('div.toggle_label').live('click',slashcomments_load_comment);
 };
 
-function slashcomments_onload() {
-  $('div.toggle_area').find('div.collapsed').hide().end().find('div.toggle_label').click(function() {
-    $(this).next().slideFadeToggle("slow");
-  });
+function slashcomments_load_comment() {
+  id = '';
+  if($(this).parent("div[id^='comment-']").length > 0) {
+   id =  $(this).parent("div[id^='comment-']").attr('id');
+  }
+  else {
+id =  $(this).parent("div[id^='post-']").attr('id');
+  }
+  cid = id.substring(id.lastIndexOf('-')+1);
+  var loaded = function (data) {
+    loadedContent = $('<div/>').append(data.message);
+    loadedContent.find('li.comment_parent').hide();
+    loadedContent.find('.toggle_content').hide().appendTo('#'+id).slideFadeToggle("slow");
 
-  $("form[id^='slashcomments-moderation-form']").submit(slashcomments_submit_moderation_form);
+    $('#'+id).find('div.toggle_label').bind('click',function() {
+      $(this).next().slideFadeToggle("slow");
+    });
+
+    if (typeof Drupal.ajax_comments_init_links=="function") {
+      Drupal.ajax_comments_init_links();
+    }
+
+  }
+
+  var error_handler = function(xhr, ajaxOptions, thrownError) {
+    alert("Error loading comment");
+  }
+
+  if($('#'+id).find('.toggle_content').length == 0) {
+    $.ajax({
+      type: 'POST',       // Use the POST method.
+      url: Drupal.settings.baseUrl+'/slashcomments/load_comment',
+      data: 'js=1&cid='+cid,
+      dataType: 'json',
+      error:  error_handler,
+      success: loaded
+    });
+  }
 }
 
 function slashcomments_submit_moderation_form() {
@@ -69,7 +98,7 @@ function slashcomments_submit_moderation_form() {
 
   $.ajax({
     type: 'POST',       // Use the POST method.
-    url: Drupal.settings.baseUrl+'/slashdot/moderate',
+    url: Drupal.settings.baseUrl+'/slashcomments/moderate',
     data: 'js=1&cid='+cid+'&uid='+uid+'&vote='+vote,
     dataType: 'json',
     error:  error_handler,
