@@ -1,4 +1,6 @@
 <?php
+// $Id$
+
 /**
  * @file
  * A handler to provide proper displays for user badges.

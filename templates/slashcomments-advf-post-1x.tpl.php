@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -54,7 +55,7 @@
       <span class="post-num"><?php print $comment_link . ' ' . $page_link; ?></span>
     <?php endif; ?>
   </div>
-  <?php if($collapsed != 'collapsed') : ?>
+  <?php if ($collapsed != 'collapsed') : ?>
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
     <div class="forum-post-wrapper">
 
@@ -94,5 +95,5 @@
     <?php endif; ?>
   </div>
   </div>
-<?php endif; ?>  
+<?php endif; ?>
 </div>

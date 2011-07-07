@@ -1,4 +1,6 @@
 <?php
+// $Id$
+
 
 /**
  * @file
@@ -80,7 +82,7 @@
     <span class="forum-post-number"><?php print $comment_link . ' ' . $page_link; ?></span>
   </div> <?php // End of post info div ?>
 
-  <?php if($collapsed != 'collapsed') : ?>
+  <?php if ($collapsed != 'collapsed') : ?>
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
     <div class="forum-post-wrapper">
       <div class="forum-post-panel-sub">
@@ -127,7 +129,7 @@
       <?php endif; ?>
     </div> <?php // End of footer div ?>
   </div>
-<?php endif; ?>  
+<?php endif; ?>
 </div> <?php // End of main wrapping div ?>
 
 <?php

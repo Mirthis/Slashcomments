@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -315,18 +316,17 @@ function slashcomments_init_database() {
   $created = time();
   $ret = array();
 
-  $sql = "INSERT INTO {slashcomments_karma_modifier} (karma_mod_id, karma_from, karma_to, modifier, created, modified) 
+  $sql = "INSERT INTO {slashcomments_karma_modifier} (karma_mod_id, karma_from, karma_to, modifier, created, modified)
 VALUES
-(1, -1000, -1, -2, $created, $created),
-(2, 1, 1, 0, $created, $created),
-(3, 0, 0, -1, $created, $created),
-(4, 2, 1000, 1, $created, $created)
+(1, 1, 1, 0, $created, $created),
+(2, -1000, 0, -1, $created, $created),
+(3, 2, 1000, 1, $created, $created)
 ";
 
 update_sql($sql);
 
 // db_query("TRUNCATE TABLE slashcomments_karma_modifier");
-$sql = "INSERT INTO {slashcomments_rating_options} 
+$sql = "INSERT INTO {slashcomments_rating_options}
 (rating_id, rating, score, weight, enabled, created, modified)
 VALUES
 (99, 'Normal', 0, 0, 0, $created, $created),
@@ -364,9 +364,9 @@ function slashcomments_update_6101(&$sandbox) {
 
   $batch  = array(
       'operations' => array(
-        array('slashcomments_batch_migrate_old_data',array()),
-        array('slashcomments_batch_update_karma',array()),
-        array('slashcomments_batch_update_ratings',array())
+        array('slashcomments_batch_migrate_old_data', array()),
+        array('slashcomments_batch_update_karma', array()),
+        array('slashcomments_batch_update_ratings', array())
         ),
       'title' => t('Update data to version 6.x-1.1'),
       'init_message' => t('Database upate is starting.'),
@@ -390,7 +390,7 @@ function slashcomments_batch_update_finished($success, $results, $operations) {
   }
   else {
     $error_operation = reset($operations);
-    $message = t('An error occurred while processing %error_operation with arguments: @arguments', 
+    $message = t('An error occurred while processing %error_operation with arguments: @arguments',
         array('%error_operation' => $error_operation[0], '@arguments' => print_r($error_operation[1], TRUE)));
   }
   drupal_set_message($message);

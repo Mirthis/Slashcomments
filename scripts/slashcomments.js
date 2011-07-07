@@ -35,7 +35,7 @@ id =  $(this).parent("div[id^='post-']").attr('id');
   }
 
   var error_handler = function(xhr, ajaxOptions, thrownError) {
-    alert("Error loading comment");
+    alert(Drupal.t("Error loading comment"));
   }
 
   if($('#'+id).find('.toggle_content').length == 0) {

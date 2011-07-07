@@ -74,3 +74,7 @@ span.scomments_info {
 div.collapsed {
   display:none;
 }
+
+div.indented div.indented div.indented {
+  margin-left:0px;
+}

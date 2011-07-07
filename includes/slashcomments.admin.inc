@@ -1,5 +1,5 @@
 <?php
-
+//  $Id$
 /**
  * @file
  */
@@ -26,7 +26,7 @@ function slashcomments_admin_general_form() {
     '#description' => t('Score assigned to new comments posted by registered users. The actual value
                         can be affected by other factors as the user karma.'),
   );
- 
+
   $form['slashcomments_general']['slashcomments_default_score_anonymous'] = array(
     '#type' => 'textfield',
     '#title' => t('Initial score for new comments from anonymous users'),
@@ -50,7 +50,7 @@ function slashcomments_admin_general_form() {
     '#title' => t('Daily moderation per user'),
     '#size' => 5,
     '#default_value' => _slashcomments_get_mod_per_day(),
-    '#description' => t('Number of comments that a single moderator can moderate during the same day. 
+    '#description' => t('Number of comments that a single moderator can moderate during the same day.
     A 0 value imply that user can\'t moderate. A !infinite value imply that users has infinite mod points',
     array('!infinite' => SLASHCOMMENTS_INFINITE_MOD_POINTS)),
   );
@@ -138,29 +138,29 @@ function slashcomments_admin_ratings_form() {
 
   $options = _slashcomments_settings_get_options();
 
-  foreach($options as $opt) {
+  foreach ($options as $opt) {
     $form['options'][$opt['rating_id']] = array(
-      'rating_id' => array (
+      'rating_id' => array(
         '#type' => 'hidden',
         '#value' => $opt['rating_id'],
       ),
-      'rating' => array (
+      'rating' => array(
         '#type' => 'textfield',
         '#size' => 15,
         '#required' => TRUE,
         '#default_value' => $opt['rating']
       ),
-      'score' => array (
+      'score' => array(
         '#type' => 'textfield',
         '#size' => 15,
         '#required' => TRUE,
         '#default_value' => $opt['score']
-      ), 
-      'enabled' => array (
+      ),
+      'enabled' => array(
         '#type' => 'checkbox',
         '#default_value' => $opt['enabled']
-      ), 
-      'weight' => array (
+      ),
+      'weight' => array(
         '#type' => 'weight',
         '#delta' => 10,
         '#default_value' => $opt['weight'],
@@ -183,7 +183,7 @@ function slashcomments_admin_mantain_form() {
     '#type' => 'submit',
     '#value' => t('Re-calculate karma'),
   );
-  
+
   $form['calculate ratings'] = array(
     '#type' => 'submit',
     '#value' => t('Re-calculate ratings'),
@@ -199,9 +199,9 @@ function slashcomments_admin_mantain_form() {
 
 function slashcomments_admin_ratings_form_validate($form, &$form_state) {
     $score_error = FALSE;
-    foreach($form_state['values']['options'] as $v) {
-      if(!(_slashcomments_is_integet($v['score']))) {
-        if($score_error) {
+    foreach ($form_state['values']['options'] as $v) {
+      if (!(_slashcomments_is_integet($v['score']))) {
+        if ($score_error) {
           form_set_error('options][' . $v['rating_id'] . '][score');
         }
         else {
@@ -235,9 +235,9 @@ function slashcomments_admin_ratings_form_submit($form, &$form_state) {
   $posted_only = array_diff_assoc($posted_options, $stored_options);
   $stored_only = array_diff_assoc($stored_options, $posted_options);
 
-  foreach($ids as $id) {
+  foreach ($ids as $id) {
     $posted_options[$id]['enable'] = '' . $posted_options['enable'];
-    if(array_diff($posted_options[$id], $stored_options[$id])) {
+    if (array_diff($posted_options[$id], $stored_options[$id])) {
       $sql = "UPDATE {slashcomments_rating_options}
         SET rating = '%s', score = %d, enabled = %d, weight = %d
         WHERE rating_id = %d";
@@ -263,7 +263,7 @@ function _slashcomments_settings_get_options() {
   $db_ratings = db_query($sql);
 
   $rating_options = array();
-  while($rating = db_fetch_array($db_ratings)) {
+  while ($rating = db_fetch_array($db_ratings)) {
     $rating_options[$rating['rating_id']] = $rating;
   }
 
@@ -280,32 +280,32 @@ function _slashcomments_is_non_negative_integet($value) {
 
 function slashcomments_admin_general_form_validate($form, &$form_state) {
 
-  if(!_slashcomments_is_integet($form_state['values']['slashcomments_default_score'])) {
-    form_set_error('slashcomments_default_score',t('Initial score for registered users must be an integer'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_default_score'])) {
+    form_set_error('slashcomments_default_score', t('Initial score for registered users must be an integer'));
   }
-  if(!_slashcomments_is_integet($form_state['values']['slashcomments_default_score_anonymous'])) {
-    form_set_error('slashcomments_default_score_anonymous',t('Initial score for anonymous users must be an integer'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_default_score_anonymous'])) {
+    form_set_error('slashcomments_default_score_anonymous', t('Initial score for anonymous users must be an integer'));
   }
-  if(!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_limit_newbie'])) {
-    form_set_error('slashcomments_limit_newbie',t('Numbers of days before a new user can moderate must be a non-negative number'));
+  if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_limit_newbie'])) {
+    form_set_error('slashcomments_limit_newbie', t('Numbers of days before a new user can moderate must be a non-negative number'));
   }
-  if(!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_mod_per_day'])) {
-    form_set_error('slashcomments_mod_per_day',t('Daily moderation per user must be greater or equal to 0'));
+  if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_mod_per_day'])) {
+    form_set_error('slashcomments_mod_per_day', t('Daily moderation per user must be greater or equal to 0'));
   }
 }
 
 function slashcomments_admin_karma_form_validate($form, &$form_state) {
-  if(!$form_state['values']['slashcomments_enable_karma']) {
+  if (!$form_state['values']['slashcomments_enable_karma']) {
     return;
   }
-  if(!_slashcomments_is_integet($form_state['values']['slashcomments_default_karma'])) {
-    form_set_error('slashcomments_default_karma',t('Default karma value must be an integer'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_default_karma'])) {
+    form_set_error('slashcomments_default_karma', t('Default karma value must be an integer'));
   }
-  if(!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_ratings_for_karma'])) {
-    form_set_error('slashcomments_ratings_for_karma',t('Moderated comments before karma is calculated must be greater or equal to 0'));
+  if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_ratings_for_karma'])) {
+    form_set_error('slashcomments_ratings_for_karma', t('Moderated comments before karma is calculated must be greater or equal to 0'));
   }
-  if(!_slashcomments_is_integet($form_state['values']['slashcomments_limit_karma'])) {
-    form_set_error('slashcomments_limit_karma',t('Karma required for moderation must be greater or equal to 0'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_limit_karma'])) {
+    form_set_error('slashcomments_limit_karma', t('Karma required for moderation must be greater or equal to 0'));
   }
 }
 
@@ -314,7 +314,7 @@ function slashcomments_admin_karma_form_validate($form, &$form_state) {
  */
 function slashcomments_admin_karma_form_submit($form, &$form_state) {
   if ($form_state['values']['slashcomments_enable_karma'] == 1) {
-    if (!_slashcomments_karma_enabled() 
+    if (!_slashcomments_karma_enabled()
       || $form_state['values']['slashcomments_ratings_for_karma'] <> _slashcomments_get_ratings_for_karma()) {
         variable_set('slashcomments_ratings_for_karma', $form_state['values']['slashcomments_ratings_for_karma']);
         slashcomments_update_all_karma();
@@ -333,7 +333,7 @@ function theme_slashcomments_admin_ratings_form($form) {
   $output = '';
 
   // loop through each "row" in the table array
-  foreach($form['options'] as $id => $row) {
+  foreach ($form['options'] as $id => $row) {
     // if $id is not a number skip this row in the data structure
     if (!is_numeric($id))
       continue;
@@ -351,7 +351,7 @@ function theme_slashcomments_admin_ratings_form($form) {
     $this_row[] = drupal_render($row['weight']);
 
     //Add the row to the array of rows
-    $table_rows[] = array('data' => $this_row, 'class'=>'draggable');
+    $table_rows[] = array('data' => $this_row, 'class' => 'draggable');
   }
 
   // Make sure the header count matches the column count
@@ -365,7 +365,7 @@ function theme_slashcomments_admin_ratings_form($form) {
   $table_id = 'options';
 
   // this function is what brings in the javascript to make our table drag-and-droppable
-  drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');   
+  drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');
 
   // over-write the 'my_items' form element with the markup generated from our table
   $form['options'] = array(
@@ -384,7 +384,7 @@ function theme_slashcomments_admin_ratings_form($form) {
 
 function slashcomments_update_all_karma() {
   $batch  = array(
-    'operations' => array(array('slashcomments_batch_update_karma',array())),
+    'operations' => array(array('slashcomments_batch_update_karma', array())),
     'finished' => 'slashcomments_batch_update_karma_finished',
     'title' => t('Updating users karma'),
     'init_message' => t('Karma update is starting.'),
@@ -398,7 +398,7 @@ function slashcomments_update_all_karma() {
 
 function slashcomments_update_all_ratings() {
   $batch  = array(
-    'operations' => array(array('slashcomments_batch_update_ratings',array())),
+    'operations' => array(array('slashcomments_batch_update_ratings', array())),
     'finished' => 'slashcomments_batch_update_ratings_finished',
     'title' => t('Updating comments rating'),
     'init_message' => t('Ratings update is starting.'),
@@ -412,7 +412,7 @@ function slashcomments_update_all_ratings() {
 
 function slashcomments_migrate_old_data() {
   $batch  = array(
-    'operations' => array(array('slashcomments_batch_migrate_old_data',array())),
+    'operations' => array(array('slashcomments_batch_migrate_old_data', array())),
     'finished' => 'slashcomments_batch_migrate_old_data_finished',
     'title' => t('Migrating v1.0 data to current version'),
     'init_message' => t('Data migration is starting.'),

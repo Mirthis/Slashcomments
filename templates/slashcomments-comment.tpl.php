@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -24,7 +25,7 @@
  */
 ?>
 
-<?php 
+<?php
   if (!$comment->name) {
     $comment->name = t('Anonymous');
   }
@@ -38,26 +39,27 @@
        <span class="new"><?php print $new; ?></span>
       <?php endif; ?>
       <b><?php print $comment->subject ?></b>
-      <?php print $slashcomments_rating ?> 
+      <?php print $slashcomments_rating ?>
    </div>
 
-  <?php if($collapsed != 'collapsed') : ?>
+  <?php if ($collapsed != 'collapsed') : ?>
   <div class="toggle_content <?php if (arg(0) != 'comment'): print $collapsed; endif; ?>">
     <div class="author">
     <?php if ($picture) print $picture; ?>
-    <?php print $author ?>
-    </div>  
+  <p class="slashcomments-author-name">  <?php print $author ?></p>
+    <?php print $slashcomments_karma ?>
+    </div>
 
     <div class="comment-content">
      <?php print $content ?>
         <?php print $slashcomments_form ?>
-        <?php // print $slashcomments_Status ?> 
-      <div class="clear clear-block"></div>     
+        <?php // print $slashcomments_Status ?>
+      <div class="clear clear-block"></div>
       <div class="meta">
         <div class="links"><?php print $links; ?></div>
       </div>
       <?php if ($signature): ?><div class="user-signature"><?php print $signature ?></div><?php endif; ?>
     </div>
   </div>
-<?php endif; ?>  
+<?php endif; ?>
 </div>
