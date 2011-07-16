@@ -1,5 +1,5 @@
 name = Slashcomments
-description = Upgrades default comment system to Slashdot comment system
+description = Enanche comment system with Slashdot-like moderation features
 dependencies[] = comment
 dependencies[] = votingapi
 dependencies[] = jquery_update

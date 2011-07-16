@@ -1,24 +1,27 @@
 <?php
 /**
  * @file
- * Module to implement some of the features of slasdhot moderation system
+ * The slashcomments module enanche the default commenting system with some of 
+ * the features of the slashdot moderation system (moderation, karma, view by 
+ * threshold
  */
 
+// Fixed costants used by the module - settings are not available
 // Commnet flat and trheaded display
 define('SLASHCOMMENTS_MODE_FLAT', 2);
 define('SLASHCOMMENTS_MODE_THREADED', 4);
-
-// Higher score valid for karma
+// Value to represent that a user has infinite moderation points
 define('SLASHCOMMENTS_INFINITE_MOD_POINTS', -1);
+// Lowest and highest displayed score (not the actual score stored in the db)
+define('SLASHCOMMENTS_LOWEST_DISPLAY_RATING',-1);
+define('SLASHCOMMENTS_HIGHEST_DISPLAY_RATING',5);
 
-// Comment default rating  */
+// Module settings - can be configured through the administration page
+// Comment default rating
 define('SLASHCOMMENTS_DEFAULT_SCORE', 1);
 define('SLASHCOMMENTS_DEFAULT_SCORE_ANONYMOUS', 0);
-
-// Comment default rating  */
+// Default threshold for displaying comments
 define('SLASHCOMMENTS_DEFAULT_THRESHOLD', 2);
-
-// Default Settings Values:
 //  limit moderation from participating users
 define('SLASHCOMMENTS_LIMIT_TAKEPART', 1);
 // days before newbie users can post
@@ -31,7 +34,7 @@ define('SLASHCOMMENTS_LIMIT_KARMA', 2);
 define('SLASHCOMMENTS_DEFAULT_KARMA', 1);
 // numbers of moderated comment for having karma
 define('SLASHCOMMENTS_RATINGS_FOR_KARMA', 10);
-// numbers of moderation per day
+// numbers of moderation points per day
 define('SLASHCOMMENTS_MOD_PER_DAY', 10);
 // default path for the help page
 define('SLASHCOMMENTS_HELP_PAGE_PATH', 'slashcomments/help');
@@ -41,23 +44,12 @@ define('SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA', -6);
 define('SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA', 8);
 
 
-function slashcomments_init() {
- //slashcomments_load_comment(1070);
-}
-
 /**
  * Implementation of hook_views_api().
  */
 function slashcomments_views_api() {
   return array('api' => 2.0,
                'path' => drupal_get_path('module', 'slashcomments') . '/includes/views');
-}
-
-/**
- * Implementation of hook_perm().
- */
-function slashcomments_perm() {
-  return array('moderate comments', 'administer slashcomments', 'bypass moderation restriction');
 }
 
 /**
@@ -101,7 +93,7 @@ function slashcomments_menu() {
           'access arguments' => array('administer slashcomments'),
   );
 
-  // Add the karma tab to the settings page
+  // Add the Karma tab to the settings page
   $items['admin/settings/slashcomments/karma'] = array(
     'title' => 'Karma',
     'weight' => 1,
@@ -113,7 +105,7 @@ function slashcomments_menu() {
     'file' => 'slashcomments.admin.inc',
   );
 
-  // Add the ratings tab to the settings page
+  // Add the Ratings tab to the settings page
   $items['admin/settings/slashcomments/ratings'] = array(
     'title' => 'Ratings',
     'weight' => 2,
@@ -126,7 +118,7 @@ function slashcomments_menu() {
   );
 
   // Add the mantain tab to the settings page
-  $items['admin/settings/slashcomments/mantain'] = array(
+  /*$items['admin/settings/slashcomments/mantain'] = array(
     'title' => 'Maintanance',
     'weight' => 3,
     'page callback' => 'drupal_get_form',
@@ -135,7 +127,7 @@ function slashcomments_menu() {
     'type' => MENU_LOCAL_TASK,
     'file path' => drupal_get_path('module', 'slashcomments') . '/includes/',
     'file' => 'slashcomments.admin.inc',
-  );
+  );*/
 
   // Add the callback to the public help page
   $items['slashcomments/help'] = array(
@@ -156,31 +148,38 @@ function slashcomments_menu() {
  * Implementation of hook_theme().
  */
 function slashcomments_theme() {
+  // Theme comments
   $items['slashcomments_comment'] = array(
     'template' => 'slashcomments-comment',
   );
 
+  // Theme the default help page
   $items['slashcomments_help'] = array(
     'template' => 'slashcomments-help',
     'path' => drupal_get_path('module', 'slashcomments') . '/templates',
   );
 
+  // Theme the moderation form wrapper
   $items['slashcomments_form_wrapper'] = array(
     'arguments' => array('cid' => NULL, 'uid' => NULL, 'message' => NULL),
   );
 
+  // Theme the form in the Ratings settings page
   $items['slashcomments_admin_ratings_form'] = array(
     'arguments' => array('form' => NULL),
   );
 
+  // Theme comment rating and score
   $items['slashcomments_rating'] = array(
     'arguments' => array('rating' => NULL),
   );
 
+  // Theme modration result
   $items['slashcomments_moderation_status'] = array(
     'arguments' => array('status_result' => NULL),
   );
 
+  // Theme karma
   $items['slashcomments_karma'] = array(
     'arguments' => array('karma' => NULL),
   );
@@ -188,53 +187,209 @@ function slashcomments_theme() {
   return $items;
 }
 
+
 /**
- * Implementation of access callback used to restrict moderation
+ * Implementation of hook_perm().
+ */
+function slashcomments_perm() {
+  return array('moderate comments', 'administer slashcomments', 'bypass moderation restriction');
+}
+
+/**
+ * Implements access callback for moderatiing comments
  */
 function slashcomments_moderate_access() {
   return user_access('access content') &&
     (user_access('moderate comments') || user_access('bypass moderation restriction'));
 }
 
+
 /**
- * Implemente the callback for slashdot/load_comment menu entry responsible
- * of loading a single comment through AJAX
+ * Determines if a given user can vote on a given comment
+ *
+ * According to user's role permission, karma, and other slashcomments settings 
+ * determine if a user should be allowed to moderate a specific comment
+ *
+ * @param $uid
+ *  User id of the user who's going to be checked
+ *
+ * @parma $cid
+ *  Comment id of the comment the user need to moderate
+ *
+ * @return
+ *  An associative array with two keys:
+ *  - result: 1 if user can moderate, 0 if user can't moderate
+ *  - message: when result is 0 the reason why the user can't moderate
+ */
+function slashcomments_user_can_moderate($uid, $cid) {
+  /* skip controls for the super user */
+  if (user_access('bypass moderation restriction') || $uid == 1) {
+    return array('result' => 1, 'message' => '');
+  }
+
+  // keeps the status for checks which are comment independent
+  // to avoid executing them multiple times during comment rendering
+  static $result = array('result' => 0, 'message' => '', 'step' => 1);
+
+  // comment indipendent checks has given a negative result, exit
+  if ($result['step'] == 1) {
+    return $result;
+  }
+  if ($result['step'] != 2) { // comment's indipendent checks need to be performed
+    $can_vote = 0;
+    global $user;
+
+    // check user has the needed permissiCon
+    if (!user_access('moderate comments')) {
+      $result['message'] = _slashcomments_get_moderation_message(-1, $uid);
+      return $result;
+    }
+
+    // check if user is still a new bie
+    if (strtotime("-" . _slashcomments_get_limit_newbie() . " day") < $user->created) {
+      $result['message'] = _slashcomments_get_moderation_message(-5, $uid);
+      return $result;
+    }
+
+    // check if user has the needed karma
+    if (_slashcomments_karma_enabled()
+      && slashcomments_get_user_karma($uid) < _slashcomments_get_limit_karma()) {
+        $result['message'] = _slashcomments_get_moderation_message(-2, $uid);
+        return $result;
+      }
+
+    // check if the user has enough moderation points
+    if (_slashcomments_get_mod_per_day() != SLASHCOMMENTS_INFINITE_MOD_POINTS && !_slashcomments_user_has_mod_points($uid)) {
+      $result['message'] = _slashcomments_get_moderation_message(-3, $uid);
+      return $result;
+    }
+
+    // check if the moderator is the author of the node  */
+    $node_author = db_result(db_query("SELECT n.uid FROM {comments} c, {node} n WHERE c.cid=%d AND c.nid = n.nid", $cid));
+
+    if ($node_author == $uid) {
+      $result['message'] = _slashcomments_get_moderation_message(-4, $uid);
+      return $result;
+    }
+  }
+
+  $result = array('step' => 2);
+
+  // check if the user has already moderated this comment
+  if (votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'))) {
+    $result['message'] = _slashcomments_get_moderation_message(-6, $uid);
+    return $result;
+  }
+
+  // check if user is participating in the discussion
+  return slashcomments_user_participating_in_discussion($uid, $cid);
+}
+
+
+/**
+ * Checks if user has taken part in the discussion
+ *
+ * Checks if the user is the author of the comment or if it has already 
+ * commented the node
+ *
+ * @param $uid
+ *  User id of the user who's going to be checked
+ *
+ * @parma $cid
+ *  Comment id of the comment the user need to moderate
+ *
+ * @return
+ *  An associative array with two keys:
+ *  - result: 1 if user can moderate, 0 if user can't moderate
+ *  - message: when result is 0 the reason why the user can't moderate
+ */
+function slashcomments_user_participating_in_discussion($uid, $cid) {
+  // keeps this variable to avoid executing unecessary checks during
+  // multiple comments rendering
+  static $participating = -1;
+
+  // result has already been estabilished in  a previous execution.
+  if ($result) {
+    return $result;
+  }
+
+  // When the option is set check if the user has already commented the node
+  if (_slashcomments_get_limit_takepart()) {
+    $sql = "SELECT count(*) cnt FROM {comments} c WHERE uid = %d AND nid
+      = (SELECT t.nid FROM {comments} t WHERE t.cid = %d)";
+
+    // get user's comments with nid
+    $user_cid = db_result(db_query($sql, $uid, $cid));
+    if ($user_cid == 0) {
+      $result = array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
+    }
+    else {
+      $result = array('result' => 0, 'message' => _slashcomments_get_moderation_message(-7, $uid));
+    }
+    return $result;
+  }
+  else {
+    // get nid of the discussion
+    $nid = db_result(db_query("SELECT count(*) FROM {comments} WHERE cid=%d AND uid=%d", $cid, $uid));
+    if ($nid == 0) {
+      return array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
+    }
+    return array('result' => 0, 'message' => _slashcomments_get_moderation_message(-8, $uid));
+  }
+}
+
+/**
+ * Loads a single comment
+ *
+ * This callback is called when a collapsed comment is expanded for the first 
+ * time. It loads the comment body and return it to the javascript function to 
+ * be displayed
  */
 function slashcomments_load_comment() {
+  // If expected parameter are not sent in the HTTP request return
   if (empty($_POST['js']) || !is_numeric($_POST['cid'])) {
     return;
   }
 
+  // Force rendering of comment body even if it's score is below theshold
   global $_slashcomments_ignore_threshold;
   $_slashcomments_ignore_threshold = 1;
 
+  // load the parent node of the comment
   $nid = db_result(db_query("SELECT nid FROM {comments} WHERE cid = %d", $_POST['cid']));
   if (!$nid) return;
 
   $node = node_load($nid);
+
+  // retrieve comment output
   $out = comment_render($node, $_POST['cid']);
-  // Set variable to be used by ajax success hander
+  
+  // Make the result available for the ajax handler
   drupal_json(array(
     'status' => 'OK',
     'message' => $out,
   ));
+
+  // Restore standard rendering
+  $_slashcomments_ignore_threshold = 0;
   exit();
 }
 
 /**
- * Implemente the callback for slashdot/moderate menu entry responsible
- * of hnandling AJAX modration
+ * Moderates a comment.
+ *
+ * This callback is called through AJAX when the moderate form is submitted. 
  */
 function slashcomments_moderate() {
   global $user;
 
-  // Check needed variable has been sent
+  // If expected parameter are not sent in the HTTP request return
   if (empty($_POST['js']) || !is_numeric($_POST['cid'])
     || !is_numeric($_POST['uid']) || !is_numeric($_POST['vote']) ) {
       return;
     }
 
-  // save the vote
+  // save the moderation
   $result = slashcomments_store_vote($_POST['cid'], $_POST['vote']);
   if (!$result['result']) {
     drupal_json(array(
@@ -246,40 +401,40 @@ function slashcomments_moderate() {
   }
 
   // Get the new rating for the moderated comment
-  $rating = slashcomments_get_comment_rating($_POST['cid']);
+  $rating = slashcomments_get_content_rating($_POST['cid']);
 
   // Create the string representation of the rating
   $rating_str = theme('slashcomments_rating', $rating);
 
   // Create the string for the message to display after moderation
-  $message_str = theme();
+  $message_str = theme('slashcomments_moderation_status', $result);
 
-  // Set variable to be used by ajax success hander
+  // Set variable for the JS handler
   drupal_json(array(
     'status' => 'OK',
     'rating' => $rating_str,
-    'message' => theme('slashcomments_moderation_status', $result),
+    'message' => $message_str,
     'hide_forms' => !_slashcomments_user_has_mod_points($user->uid)
   ));
   exit();
 }
 
 /**
- * Submit function for comment moderation form, called if AJAX moderation is off
+ * Submits comment without using AJAX
  */
 function slashcomments_moderation_form_submit($form, &$form_state) {
   slashcomments_store_vote($form_state['values']['cid'], $form_state['values']['vote']);
 }
 
 /**
- * Store a moderation vote
+ * Stores a moderation vote
  */
 function slashcomments_store_vote($cid, $vote) {
   global $user;
 
   $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
 
-  $result = slashcomments_user_can_vote($user->uid, $cid);
+  $result = slashcomments_user_can_moderate($user->uid, $cid);
 
   // Check if user is allowed to vote
   if ($result['result'] == 0) {
@@ -312,31 +467,644 @@ function slashcomments_store_vote($cid, $vote) {
   return $result;
 }
 
-/* Theming function for slashcomments_rating. Used to display
- * the score and rating of each comment */
-function theme_slashcomments_rating($rating) {
-  $icon_url = _slashcomments_get_image_path() . '/question_mark.png';
-  $icon_url_2 = _slashcomments_get_image_path() . '/forbidden.png';
-  $help_page = url(_slashcomments_get_help_page_path());
 
-  $output = '<span class="scomments_rating">';
-  $output .= '(' . t('Score') . ': ' . $rating['score'];
-  $output .= ($rating['rating']) ? ' ' . $rating['rating'] : '';
-  $output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url .'" /></a>';
-  //$output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url_2 .'" /></a>';
-  $output .= ')';
-  $output .= '</span>';
+/**
+ * Deletes ratings for a single comment,
+ *
+ * It delets from the database all information slashcomments stored for the 
+ * comment. Karma of the author is re-caculated.
+ *
+ * @param $cid
+ *   Comment id of the deleted comment.
+ */
+function slashcomments_delete_rating($cid) {
+  $delete_votes = "DELETE FROM {votingapi_vote}
+    WHERE content_id = %d
+    AND tag = 'slashcomments'";
 
+  db_query($delete_votes, $cid);
+
+  if (db_affected_rows() < 1) {
+    return;
+  }
+
+  $author_uid = db_result(db_query("SELECT uid FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid));
+  votingapi_recalculate_results('comment', $cid, TRUE);
+  db_query("DELETE FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid);
+  db_query("DELETE FROM {slashcomments_contents_karma} WHERE content_id = %d", $cid);
+
+  slashcomments_update_karma($author_uid);
+}
+
+
+/**
+ * Retrieves content rating.
+ *
+ * Get comment score and rating for a specific content. Only comments are 
+ * currently supported.
+ *
+ * @param $cid
+ *   Comment id of the comments
+ *
+ * @return
+ *   Array containing score and rating
+ *   'score' => numeric score associated to the comment
+ *   'rating' => text correspoding to the most voted rating
+ */
+function slashcomments_get_content_rating($cid) {
+  $score = _slashcomments_get_default_score();
+  $rating = '';
+  $has_rating = FALSE;
+
+  $sql = "SELECT r.score, o.rating
+    FROM {slashcomments_contents_rating} r, {slashcomments_rating_options} o
+    WHERE most_rated_id = o.rating_id and r.content_id = %d";
+
+  // Get score and rating for the comment
+  $result = db_query($sql, $cid);
+  $db_rating = db_fetch_object($result);
+
+  // if no result is retrieved set the default rating and description value
+  if ($db_rating) {
+    $score = $db_rating->score;
+    $rating = $db_rating->rating;
+    $has_rating = TRUE;
+  }
+
+  // if karma is enabled get karma modified score
+  if (_slashcomments_karma_enabled()) {
+    $modifier = _slashcomments_get_content_karma_modifier($cid);
+    if ($modifier) {
+      $score += $modifier;
+      $has_rating = TRUE;
+    }
+  }
+
+  // If no rating information has been retrieved from the db check if it's 
+  // author is anonymous and apply modifier to the default rating if needed
+  if ($has_rating == FALSE) {
+    $author_id = db_result(db_query("SELECT uid FROM {comments} WHERE cid = %d", $cid));
+    $score = ($author_id) ? _slashcomments_get_default_score() : _slashcomments_get_default_score_anonymous();
+  }
+
+  // Avoid having an infinite score scale limiting min and max score value
+  $score = ($score < SLASHCOMMENTS_LOWEST_DISPLAY_RATING) ? SLASHCOMMENTS_LOWEST_DISPLAY_RATING 
+    : (($score > SLASHCOMMENTS_HIGHEST_DISPLAY_RATING) ?  SLASHCOMMENTS_HIGHEST_DISPLAY_RATING : $score);
+
+  // return score and rating
+  return array('score' => $score, 'rating' => $rating);
+}
+
+/**
+ * Updates rating for a given content.
+ *
+ * Recalculate rating for a given content according to the moderation/votes it 
+ * received. Only comments are supported as content.
+ *
+ * @param $content_id
+ *   The content identifier.
+ */
+function slashcomments_update_rating($content_id) {
+  // Get the new rating for the content
+  $rating = slashcomments_calculate_rating($content_id);
+
+  // Set missing field base on the fact the content rating has already be stored
+  $rating['modified'] = time();
+
+  $exists = db_result(db_query("SELECT count(*) from {slashcomments_contents_rating} WHERE content_id = %d", $content_id));
+  if ($exists) {
+    $update = 'content_id';
+  }
+  else {
+    $update = NULL;
+    $rating['created'] = $rating['modified'];
+  }
+
+  // Store the rating in the DB
+  $ret = drupal_write_record('slashcomments_contents_rating', $rating, $update);
+}
+
+/**
+ * Sets the initial rating for a given content.
+ *
+ * When a content is submitted it's initial score depends on the user karma. If 
+ * the score is different from the default score it needs to be stored to be 
+ * used lately when the score is retrieved.
+ *
+ * @param $cid
+ *   Content_id for the content the initial value is going to be assigned
+ *
+ * @param $author_uid
+ *   Identifier of the user who posted the content
+ */
+function slashcomments_init_contents_karma($cid, $author_uid = -1) {
+  // If author is not passed to the function retrieve it from the database
+  if ($author_uid == -1) {
+    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
+  }
+
+  // If user karma has the default value no modifier is applied
+  // @TODO check modifier associated to the karma value and not karma value 
+  // itself
+  $karma = slashcomments_get_user_karma($author_uid);
+  if ($karma == _slashcomments_get_default_karma()) {
+    return;
+  }
+
+  // Assign values to missing filed and store the info
+  $record['content_id'] = $cid;
+  $record['karma'] = $karma;
+  $record['created'] = $record['modified'] = time();
+  drupal_write_record('slashcomments_contents_karma', $record);
+}
+
+/**
+ * Gets score modifier base on karma.
+ *
+ * Retrieves the score modifier for a content according to the karma its author 
+ * had when the content has been posted.
+ *
+ * @param $content_id
+ *   The identifier of the content
+ *
+ * @return
+ *   An integer indicating the increase/decrease to apply to the score
+ */
+function _slashcomments_get_content_karma_modifier($content_id) {
+  $sql = "SELECT km.modifier
+    FROM {slashcomments_contents_karma} ck, {slashcomments_karma_modifier} km
+    WHERE ck.karma BETWEEN km.karma_from AND km.karma_to
+    AND content_id=%d";
+
+  // Gets the modifier from the database
+  $modifier = db_result(db_query($sql, $content_id));
+  // Return the vale or 0 if it wasn't found
+  return ($modifier) ? $modifier : 0;
+}
+
+/**
+ * Calculates rating for a given content.
+ *
+ * @param $cid
+ *   The content identifier
+ *
+ * @return
+ *   An array with fhr following infos
+ *   'content_id' => Identifier of the content
+ *   'uid' => Identifier of the author
+ *   'score' => Score assigned to the content
+ *   'num_ratings' => Number of moderations/votes that contributed to the score
+ *   'most_rated_id' => id of the moderation options that get more votes
+ */
+function slashcomments_calculate_rating($cid) {
+  $rating = array();
+
+  $sql = "
+    SELECT  v.content_id, c.uid,
+    SUM(o.score)  + CASE WHEN c.uid = 0 THEN %d ELSE %d  END score,
+    count(*) num_ratings
+    FROM {votingapi_vote} v, {slashcomments_rating_options} o,
+    (SELECT uid FROM {comments} WHERE cid = %d) c
+    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
+    AND v.value = o.rating_id AND v.content_id = %d
+    GROUP BY v.content_id, c.uid
+    ";
+
+  // Get score info from the db
+  $result = db_query($sql, _slashcomments_get_default_score_anonymous(), _slashcomments_get_default_score(), $cid, $cid);
+  $rating = db_fetch_array($result);
+
+  // extrat most voted rating including only positive/negative
+  // values depending on the score
+  $rating['most_rated_id'] = '';
+  $score_filter = $rating['score'] >= 1 ? ">= 0" : "< 0";
+
+  $sql = "SELECT o.rating_id, count(*), max(v.timestamp)
+    FROM {votingapi_vote} v, {slashcomments_rating_options} o
+    WHERE v.value = o.rating_id
+    AND v.content_type = 'comment' AND v.content_id = %d
+    AND v.value_type = 'option' AND v.tag = 'slashcomments'
+    AND o.score %s
+    GROUP BY o.rating_id
+    ORDER BY 2 DESC, 3 DESC, 1";
+
+  $row = db_fetch_object(db_query_range($sql, $cid, $score_filter, 0, 1));
+
+  // Add the most_rated_id and return the result
+  $rating['most_rated_id'] = $row->rating_id;
+  return $rating;
+}
+
+/**
+ * Updates karma of a given user.
+ *
+ * @param $uid
+ *   User identifier
+ */
+function slashcomments_update_karma($uid) {
+  if ($uid == 0) {
+    return;
+  }
+
+  // min and max rating considering when karma is calculated
+  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d", $uid));
+  $comments_for_karma = _slashcomments_get_ratings_for_karma();
+  $lowest_for_karma = _slashcomments_get_lowest_score_for_karma();
+  $highest_for_karma = _slashcomments_get_highest_score_for_karma();
+  $has_karma = slashcomments_user_has_karma($uid);
+
+  // If moderated karma are not enough erase karma value and return
+  if ($comments_num < $comments_for_karma) {
+    if ($has_karma) {
+      db_query("DELETE FROM {slashcomments_users_karma} WHERE uid = %d", $uid);
+    }
+    return;
+  }
+
+  // Query to extract karma
+  $sql =  "SELECT AVG(CASE WHEN score <  %d THEN %d
+    WHEN score > %d THEN %d
+    ELSE score END ) karma,
+      SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
+      SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
+      FROM {slashcomments_contents_rating} r
+      WHERE r.uid = %d
+      HAVING count(*) >= %d";
+
+  // Extract the data and fill missing fields
+  $result = db_query($sql, $lowest_for_karma, $lowest_for_karma, $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
+  $record = db_fetch_object($result);
+  $record->uid = $uid;
+  $record->total = $comments_num;
+  $record->neutral = $record->total - $record->positive - $record->negative;
+  $record->modified = time();
+  if ($has_karma) {
+    $update = 'uid';
+  }
+  else {
+    $update = NULL;
+    $record->created = $record->modified;
+  }
+
+  // Store the new karma value in the db
+  drupal_write_record('slashcomments_users_karma', $record, $update);
+}
+
+/*
+ * Determines if user has karma.
+ *
+ * @param $uid
+ *   User identifier
+ *
+ * @return
+ *   TRUE if user has a karma value, FALSE otherwise
+ */
+function slashcomments_user_has_karma($uid) {
+  $sql =  "SELECT count(*)
+    FROM {slashcomments_users_karma}
+    WHERE uid = %d";
+
+  $has_karma = db_result(db_query($sql, $uid));
+
+  return ($has_karma) ? TRUE : FALSE;
+}
+
+/* 
+ * Gets the current karma value of a given user.
+ *
+ * @param $uid
+ *   User identifier whose karma has to be retrieved
+ *
+ * @return
+ *   Current karma value for the user
+ */
+function slashcomments_get_user_karma($uid) {
+  //return NULL;
+  $sql =  "SELECT karma
+    FROM {slashcomments_users_karma}
+    WHERE uid = %d";
+
+  $karma = db_result(db_query($sql, $uid));
+
+  if ($karma === FALSE OR $karma === NULL) {
+    $karma = _slashcomments_get_default_karma();
+  }
+  return $karma;
+}
+
+/* 
+ * Gets karma value to display.
+ *
+ * Gets the karma values to display on user profile and comments. The value can 
+ * be different from the real karma has the displayed scale is smaller.
+ *
+ * @param $uid
+ *   User identifier whose karma has to be retrieved
+ *
+ * @return
+ *   Karma value to display
+ */
+function slashcomments_get_user_display_karma($uid) {
+  $karma = slashcomments_get_user_karma($uid);
+  $display_karma = ($karma < SLASHCOMMENTS_LOWEST_DISPLAY_RATING) ? SLASHCOMMENTS_LOWEST_DISPLAY_RATING 
+    : (($karma > SLASHCOMMENTS_HIGHEST_DISPLAY_RATING) ?  SLASHCOMMENTS_HIGHEST_DISPLAY_RATING : $karma);
+  return $display_karma;
+}
+
+
+/**
+ * Implementation of hook_form_alter
+ *
+ * Modify comment settings form (available for each content type) and comment 
+ * controls displayed, if enabled, above and below comments.
+ */
+function slashcomments_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'comment_form') {
+    unset($form['comment_filter']['comment']['#title']);
+  }
+
+  // Add threshold option and override display mode option in the content type 
+  // settings page.
+  if ($form_id == 'node_type_form' && isset($form['identity']['type'])) {
+    $form['comment']['comment_default_threshold'] = array(
+      '#type' => 'select',
+      '#title' => t('Default comments threshold'),
+      '#default_value' => variable_get('comment_default_threshold_'. $form['#node_type']->type, SLASHCOMMENTS_DEFAULT_THRESHOLD),
+      '#options' => _slashcomments_thresholds(),
+      '#description' => t('Default threshold for comments. Comments with lower score will be collapsed.'),
+      '#weight' => -5,
+    );
+    $form['comment']['comment_default_mode'] = array(
+      '#type' => 'select',
+      '#title' => t('Default display mode'),
+      '#default_value' => variable_get('comment_default_mode_'. $form['#node_type']->type, SLASHCOMMENTS_MODE_FLAT),
+      '#options' => _slashcomments_modes(),
+      '#description' => t('The default view for comments.'),
+      '#weight' => -4,
+    );
+    $form['comment']['comment_default_per_page']['#weight'] = -3;
+
+    //order is always oldest first
+    unset($form['comment']['comment_default_order']);
+  }
+
+  // Add threshold option and override display mode option to comment controls form
+  if ($form_id == 'comment_controls') {
+    // WARNING: we cannot get node type from form info, so, we have to load from arg(1)
+    $node = node_load(arg(1));
+
+    $form['threshold'] = array(
+      '#type' => 'select',
+      '#title' => t('Threshold'),
+      '#options' => _slashcomments_thresholds($node),
+      '#default_value' => _slashcomments_get_display_setting('threshold', $node),
+      '#weight' => 0,
+    );
+
+    $form['mode'] = array(
+      '#type' => 'select',
+      '#default_value' => _slashcomments_get_display_setting('mode', $node),
+      '#options' => _slashcomments_modes(),
+      '#weight' => 1,
+    );
+
+    //order is always oldest first
+    $form['order'] = array(
+      '#type' => 'hidden',
+      '#value' => COMMENT_ORDER_OLDEST_FIRST,
+    );
+
+    $form['comments_per_page'] = array(
+      '#type' => 'select',
+      '#default_value' => _slashcomments_get_display_setting('comments_per_page', $node),
+      '#options' => _slashcomments_per_page(),
+      '#weight' => 3,
+    );
+
+    $form['#submit'][] = 'slashcomments_comment_control_submit';
+  }
+}
+
+/**
+ * Submit callback for comments control (threshold, mode, per page)
+ */
+function slashcomments_comment_control_submit($form, &$form_state) {
+  global $user;
+  $threshold = $form_state['values']['threshold'];
+  $mode = $form_state['values']['mode'];
+  $order = $form_state['values']['order'];
+  $comments_per_page = $form_state['values']['comments_per_page'];
+
+  if ($user->uid) {
+    $account = user_save($user, array('threshold' => $threshold, 'mode' => $mode, 'sort' => $order, 'comments_per_page' => $comments_per_page));
+    // Terminate if an error occured during user_save().
+    if (!$account) {
+      drupal_set_message(t("Error saving user account."), 'error');
+      return;
+    }
+  }
+
+  $_SESSION['comment_threshold'] = $threshold;
+  $_SESSION['comment_mode'] = $mode;
+  $_SESSION['comment_sort'] = $order;
+  $_SESSION['comment_comments_per_page'] = $comments_per_page;
+}
+
+
+/**
+ * FAPI definition for the comment moderation form.
+ *
+ * @ingroup forms
+ * @see slashcomments_moderation_form_submit()
+ */
+function slashcomments_moderation_form($form_state, $cid, $uid) {
+  $form['cid'] = array('#type' => 'hidden', '#default_value' => $cid);
+  $form['uid'] = array('#type' => 'hidden', '#default_value' => $uid);
+
+  $form['vote'] = array(
+    '#title' => '',
+    '#type' => 'select',
+    '#options' => _slashcomments_moderation_options(),
+    '#default_value' => 0,
+    '#weight' => 30
+  );
+
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Moderate'),
+    '#weight' => 50
+  );
+
+  $form['#submit'][] = 'slashcomments_moderation_form_submit';
+
+  return $form;
+}
+
+
+/**
+ * Implementation of hook_user().
+ */
+function slashcomments_user($op, &$edit, &$account, $category = 'account') {
+  switch ($op) {
+  case 'view':
+    if (!_slashcomments_karma_enabled()) {
+      break;
+    }
+
+    $user_karma = slashcomments_get_user_display_karma($account->uid);
+
+    $account->content['slashcomments_karma'] = array(
+      '#type' => 'user_profile_category',
+      '#title' => t('Karma'),
+      '#weight' => 10,
+    );
+    $account->content['slashcomments_karma']['karma'] = array(
+      '#title' => t('Current value'),
+      '#type' => 'user_profile_item',
+      '#value' => $user_karma,
+      '#weight' => 1,
+    );
+    break;
+  }
+}
+
+/**
+ * Implementation of hook_preprocess_comment
+ *
+ * Preprocesses template variables for the comment template. Adds comments 
+ * rating information, moderation form and class for collapsed/expanded comments 
+ * depending on the threshold.
+ */
+function slashcomments_preprocess_comment(&$variables) {
+  global $user, $_slashcomments_ignore_threshold;
+
+  $comment = $variables['comment'];
+  if (!$comment->cid) {
+    return;
+  }
+
+  // set the proper template to display comments
+  _slashcomments_set_comment_template($variables);
+  // get score and rating
+  $rating = slashcomments_get_content_rating($comment->cid);
+
+  $variables['slashcomments_rating'] = theme('slashcomments_rating', $rating);
+
+  $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
+  $can_vote = slashcomments_user_can_moderate($user->uid, $comment->cid);
+
+  // Hide moderation module if user can't moderate or is on the edit or reply page
+  if (!$reply && $can_vote['result'] == 1) {
+    $variables['slashcomments_form'] = theme('slashcomments_form_wrapper', $comment->cid, $comment->uid, "");
+    //_slashcomments_get_moderation_message(1,$comment->uid));
+  }
+
+  // add karma if it's enabled
+  if (_slashcomments_karma_enabled()) {
+    $variables['slashcomments_karma'] = theme('slashcomments_karma', slashcomments_get_user_display_karma($variables['account']->uid));
+  }
+
+  // get default threshold for the content type
+  $threshold = ($_slashcomments_ignore_threshold) ? -1 : _slashcomments_get_display_setting('threshold', $variables['node']);
+
+  // fill out template variable used as css classes to display different kind of 
+  // comments: collapsed, expanded, own
+  if ($rating['score'] >= $threshold) {
+    $variables['collapsed'] = '';
+    $variables['toggle_label'] = 'non_toggle_label';
+    $variables['toggle_area'] = 'non_toggle_area';
+  }
+  else {
+    $variables['collapsed'] = 'collapsed';
+    $variables['toggle_label'] = 'toggle_label';
+    $variables['toggle_area'] = 'toggle_area';
+  }
+  $variables['toggle_label'] .= ' ' . $comment->own;
+  $variables['toggle_area'] .= ' ' . $comment->own;
+
+  // generate permalink
+  $page_number = $_GET['page'];
+
+  if (!$page_number) {
+    $page_number = 0;
+  }
+
+  $fragment = 'comment-' . $variables['comment']->cid;
+  $query = ($page_number) ? 'page=' . $page_number : NULL;
+  $img_path = _slashcomments_get_image_path();
+  $linktext = '<img src="' . $img_path . '/permalink.gif" />';
+  $linkpath = 'node/' . $variables['node']->nid;
+  $variables['comment_link'] = l($linktext, $linkpath, array('query' => $query, 'fragment' => $fragment, 'html' => TRUE));
+
+  // Link to page created by Comment Page module, if it exists
+  $variables['page_link'] = '';
+  if (!empty($variables['comment']->page_url) && !(arg(0) == 'comment' && arg(1) == $variables['comment']->cid)) {
+    $variables['page_link'] = l(t('(permalink)'), $variables['comment']->page_url);
+  }
+}
+
+/**
+ * Overrides theme_comment_view()
+ */
+function slashcomments_comment_view($comment, $node, $links = array(), $visible = TRUE) {
+  static $first_new = TRUE;
+  $output = '';
+  $comment->new = node_mark($comment->nid, $comment->timestamp);
+  if ($first_new && $comment->new != MARK_READ) {
+    // Assign the anchor only for the first new comment. This avoids duplicate
+    // id attributes on a page.
+    $first_new = FALSE;
+    $output .= "<a id=\"new\"></a>\n";
+  }
+
+  //$output .= "<a id=\"comment-$comment->cid\"></a>\n";
+  $comment->comment = check_markup($comment->comment, $comment->format, FALSE);
+
+  // Comment API hook
+  comment_invoke_comment($comment, 'view');
+  $output .= theme('comment', $comment, $node, $links);
   return $output;
 }
 
-function theme_slashcomments_moderation_status($result) {
-  $class = ($result['result']) ? 'ok' : 'error';
-  $output = '<div class="messages ' . $class . '">';
-  $output .= $result['message'];
-  $output .= '</div>';
+/**
+ * Implementation of hook_comment().
+ */
+function slashcomments_comment($comment, $op) {
+  switch ($op) {
+  case 'view':
+    global $user;
 
-  return $output;
+    // marke comments of the user in order to theme them differently
+    if ($user->uid == $comment->uid && $user->uid != 0) {
+      $comment->own = "own";
+    }
+    break;
+  case 'insert':
+    // if karma is enable apply a modifier to the initial comment rating
+    if (_slashcomments_karma_enabled()) {
+      slashcomments_init_contents_karma($comment['cid'], $comment['uid']);
+    }
+
+    break;
+  case 'delete':
+    // Delete slashcomments data stored for the comment
+    slashcomments_delete_rating($comment->cid);
+    break;
+  }
+}
+
+
+/**
+ * Implementation of hook_preprocess_author_pane().
+ */
+function slashcomments_preprocess_author_pane(&$variables) {
+  _slashcomments_set_author_pane_template($variables);
+
+  // Add karma to template variables
+  if (_slashcomments_karma_enabled()) {
+    $variables['slashcomments_karma'] = slashcomments_get_user_display_karma($variables['account']->uid);
+  }
 }
 
 /**
@@ -393,9 +1161,109 @@ function slashcomments_theme_registry_alter($theme_registry) {
   }
 }
 
+/*
+ * Themes the status message displayed when a message is moderated
+ *
+ * @parma $result
+ *  Array with the status and message to display
+ *    'result => "ok" or "error" according to the moderation result
+ *    'message' => message displayed to the user
+ *
+ * @return
+ *  HTML for the message to display after moderation
+ */
+function theme_slashcomments_moderation_status($result) {
+  $class = ($result['result']) ? 'ok' : 'error';
+  $output = '<div class="messages ' . $class . '">';
+  $output .= $result['message'];
+  $output .= '</div>';
+
+  return $output;
+}
+
 
 /**
- * Get the template file to use for comments
+ * Themes slashcomments_rating and score. 
+ * 
+ * Themes the rating, score and help button displayed on each comment header
+ *
+ * @param $rating
+ *  Array with rating information:
+ *    'rating' => Text description of the most voted rating
+ *    'score' => Score for the comment
+ *
+ * @return
+ *  HTML for the rating, score and help button
+ */
+function theme_slashcomments_rating($rating) {
+  $icon_url = _slashcomments_get_image_path() . '/question_mark.png';
+  $icon_url_2 = _slashcomments_get_image_path() . '/forbidden.png';
+  $help_page = url(_slashcomments_get_help_page_path());
+
+  $output = '<span class="scomments_rating">';
+  $output .= '(' . t('Score') . ': ' . $rating['score'];
+  $output .= ($rating['rating']) ? ' ' . $rating['rating'] : '';
+  $output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url .'" /></a>';
+  //$output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url_2 .'" /></a>';
+  $output .= ')';
+  $output .= '</span>';
+
+  return $output;
+}
+
+
+/*
+ * Themes karma
+ *
+ * @parma $karma
+ *   Karma value
+ *
+ * @return
+ *   HTML to display karma
+ */
+function theme_slashcomments_karma($karma) {
+  return '<p class="slashcomments-karma">' . t('Karma') . ': ' . $karma . '</p>';
+}
+
+
+/**
+ * Themes the moderation form.
+ *
+ * Themes the form container and the form used to moderated comments.
+ *
+ * @param $cid
+ *   Comment id of the comment the form will moderate
+ *
+ * @param $uid
+ *   User id of the user displaying the page
+ *
+ * @param $message
+ *   Status message to display below the form (not currently used)
+ *
+ * @return
+ *   -HTML to display the form to moderate comments
+ */
+function theme_slashcomments_form_wrapper($cid, $uid, $message) {
+  $output =  '<div id="slashcomments-form-wrapper-' . $cid . '" class="scomments_container">';
+  $output .= '<div class="container-inline">';
+  $output .= '<div class="scomments_form">' .  drupal_get_form('slashcomments_moderation_form', $cid, $uid) . '</div>';
+  $output .= '<div class="scomments_loader"></div>';
+  $output .= '<div class="scomments_form_status description">' . $message . '</div>';
+  $output .= '</div></div>';
+  return $output;
+}
+
+/**
+ * Gets the template file to use for comments.
+ *
+ * Return the proper template to use for theming comments. It handle the 
+ * presence of standard comments and advanced forum (v1.0 and v2.0).
+ *
+ * @param $used_tpl_file
+ *   The name of the template file read from the theme registry.
+ *
+ * @return
+ *   The name of the template to use.
  */
 function _slashcomments_get_comment_template($used_tpl_file) {
 
@@ -408,9 +1276,17 @@ function _slashcomments_get_comment_template($used_tpl_file) {
 }
 
 
-/* Retrieve the right template for comments and set it */
+/* 
+ * Retrieves the right template for comments and set it.
+ *
+ * @param $variables
+ *  Variables preprocessed by comment preprocess function
+ *
+ * @return 
+ *  NULL
+ */
 function _slashcomments_set_comment_template(&$variables) {
-  static $new_tpl_file;
+  static $new_tpl_file; // keep the template in case multiple calls
 
   if (empty($new_tpl_file)) {
     // get current tpl_file
@@ -421,10 +1297,17 @@ function _slashcomments_set_comment_template(&$variables) {
     _slashcomments_add_comment_template_files($new_tpl_file);
   }
   $variables['template_files'][] = $new_tpl_file;
-
 }
 
-/* Include javascript and stylesheets needed by slashcomments */
+/* Includes external files (javascript and stylesheets
+ * needed for the chosen template.
+ *
+ * @param $new_tpl_file
+ *   The template file that is going to be used for displaying comments
+ *
+ * @return
+ *   NULL
+ */
 function _slashcomments_add_comment_template_files($new_tpl_file) {
 
   // add base url and other needed js variables
@@ -443,426 +1326,17 @@ function _slashcomments_add_comment_template_files($new_tpl_file) {
 }
 
 
-function theme_slashcomments_karma($karma) {
-  return '<p class="slashcomments-karma">' . t('Karma') . ': ' . $karma . '</p>';
-}
-
 /**
- * Preprocesses template variables for the comment template.
- */
-function slashcomments_preprocess_comment(&$variables) {
-  global $user, $_slashcomments_ignore_threshold;
-
-  $comment = $variables['comment'];
-  if (!$comment->cid) {
-    return;
-  }
-
-  _slashcomments_set_comment_template($variables);
-  // get score and rating
-  $rating = slashcomments_get_comment_rating($comment->cid);
-
-  $variables['slashcomments_rating'] = theme('slashcomments_rating', $rating);
-
-  $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
-  $can_vote = slashcomments_user_can_vote($user->uid, $comment->cid);
-
-  // Hide moderation module if user can't moderate or is on the edit or reply page
-  if (!$reply && $can_vote['result'] == 1) {
-    $variables['slashcomments_form'] = theme('slashcomments_form_wrapper', $comment->cid, $comment->uid, "");
-    //_slashcomments_get_moderation_message(1,$comment->uid));
-  }
-
-  if (_slashcomments_karma_enabled()) {
-    $variables['slashcomments_karma'] = theme('slashcomments_karma', slashcomments_get_user_karma($variables['account']->uid));
-  }
-
-  // get default threshold for the content type
-  $threshold = ($_slashcomments_ignore_threshold) ? -1 : _slashcomments_get_display_setting('threshold', $variables['node']);
-
-  // fill out template variables
-  if ($rating['score'] >= $threshold) {
-    $variables['collapsed'] = '';
-    $variables['toggle_label'] = 'non_toggle_label';
-    $variables['toggle_area'] = 'non_toggle_area';
-  }
-  else {
-    $variables['collapsed'] = 'collapsed';
-    $variables['toggle_label'] = 'toggle_label';
-    $variables['toggle_area'] = 'toggle_area';
-  }
-  $variables['toggle_label'] .= ' ' . $comment->own;
-  $variables['toggle_area'] .= ' ' . $comment->own;
-
-  // generate permalink
-  $page_number = $_GET['page'];
-
-  if (!$page_number) {
-    $page_number = 0;
-  }
-
-  $fragment = 'comment-' . $variables['comment']->cid;
-  $query = ($page_number) ? 'page=' . $page_number : NULL;
-  $img_path = _slashcomments_get_image_path();
-  $linktext = '<img src="' . $img_path . '/permalink.gif" />';
-  $linkpath = 'node/' . $variables['node']->nid;
-  $variables['comment_link'] = l($linktext, $linkpath, array('query' => $query, 'fragment' => $fragment, 'html' => TRUE));
-
-  // Link to page created by Comment Page module, if it exists
-  $variables['page_link'] = '';
-  if (!empty($variables['comment']->page_url) && !(arg(0) == 'comment' && arg(1) == $variables['comment']->cid)) {
-    $variables['page_link'] = l(t('(permalink)'), $variables['comment']->page_url);
-  }
-}
-
-/**
- * Provides implementation for theme_comment_view() override
- */
-function slashcomments_comment_view($comment, $node, $links = array(), $visible = TRUE) {
-  static $first_new = TRUE;
-  $output = '';
-  $comment->new = node_mark($comment->nid, $comment->timestamp);
-  if ($first_new && $comment->new != MARK_READ) {
-    // Assign the anchor only for the first new comment. This avoids duplicate
-    // id attributes on a page.
-    $first_new = FALSE;
-    $output .= "<a id=\"new\"></a>\n";
-  }
-
-  //$output .= "<a id=\"comment-$comment->cid\"></a>\n";
-  $comment->comment = check_markup($comment->comment, $comment->format, FALSE);
-
-  // Comment API hook
-  comment_invoke_comment($comment, 'view');
-  $output .= theme('comment', $comment, $node, $links);
-  return $output;
-}
-
-/**
- * Implementation of hook_comment().
- */
-function slashcomments_comment($comment, $op) {
-  switch ($op) {
-  case 'view':
-    global $user;
-
-    // marke comments of the user in order to theme them differently
-    if ($user->uid == $comment->uid && $user->uid != 0) {
-      $comment->own = "own";
-    }
-    break;
-  case 'insert':
-    // if karma is enable apply a modifier to the initial comment rating
-    if (_slashcomments_karma_enabled()) {
-      slashcomments_init_contents_karma($comment['cid'], $comment['uid']);
-    }
-
-    break;
-    // If the comment has been removed, delete infos about
-    // is score and rating and update author karma
-  case 'delete':
-    slashcomments_delete_rating($comment->cid);
-    break;
-  }
-}
-
-/**
- * Delete ratings for a single comment
- */
-function slashcomments_delete_rating($cid) {
-  $delete_votes = "DELETE FROM {votingapi_vote}
-    WHERE content_id = %d
-    AND tag = 'slashcomments'";
-
-  db_query($delete_votes, $cid);
-
-  if (db_affected_rows() < 1) {
-    return;
-  }
-
-  $author_uid = db_result(db_query("SELECT uid FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid));
-  votingapi_recalculate_results('comment', $cid, TRUE);
-  db_query("DELETE FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid);
-  db_query("DELETE FROM {slashcomments_contents_karma} WHERE content_id = %d", $cid);
-
-  slashcomments_update_karma($author_uid);
-}
-
-/**
- * Add threshold to comments control forms
- */
-function slashcomments_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'comment_form') {
-    unset($form['comment_filter']['comment']['#title']);
-  }
-
-  if ($form_id == 'node_type_form' && isset($form['identity']['type'])) {
-    $form['comment']['comment_default_threshold'] = array(
-      '#type' => 'select',
-      '#title' => t('Default comments threshold'),
-      '#default_value' => variable_get('comment_default_threshold_'. $form['#node_type']->type, SLASHCOMMENTS_DEFAULT_THRESHOLD),
-      '#options' => _slashcomments_thresholds(),
-      '#description' => t('Default threshold for comments. Comments with lower score will be collapsed.'),
-      '#weight' => -5,
-    );
-    $form['comment']['comment_default_mode'] = array(
-      '#type' => 'select',
-      '#title' => t('Default display mode'),
-      '#default_value' => variable_get('comment_default_mode_'. $form['#node_type']->type, SLASHCOMMENTS_MODE_FLAT),
-      '#options' => _slashcomments_modes(),
-      '#description' => t('The default view for comments.'),
-      '#weight' => -4,
-    );
-    $form['comment']['comment_default_per_page']['#weight'] = -3;
-    //order is always oldest first
-    unset($form['comment']['comment_default_order']);
-  }
-  if ($form_id == 'comment_controls') {
-    // WARNING: we cannot get node type from form info, so, we have to load from arg(1)
-    $node = node_load(arg(1));
-
-    $form['threshold'] = array(
-      '#type' => 'select',
-      '#title' => t('Threshold'),
-      '#options' => _slashcomments_thresholds($node),
-      '#default_value' => _slashcomments_get_display_setting('threshold', $node),
-      '#weight' => 0,
-    );
-
-    $form['mode'] = array(
-      '#type' => 'select',
-      '#default_value' => _slashcomments_get_display_setting('mode', $node),
-      '#options' => _slashcomments_modes(),
-      '#weight' => 1,
-    );
-
-    //order is always oldest first
-    $form['order'] = array(
-      '#type' => 'hidden',
-      '#value' => COMMENT_ORDER_OLDEST_FIRST,
-    );
-
-    $form['comments_per_page'] = array(
-      '#type' => 'select',
-      '#default_value' => _slashcomments_get_display_setting('comments_per_page', $node),
-      '#options' => _slashcomments_per_page(),
-      '#weight' => 3,
-    );
-
-    $form['#submit'][] = 'slashcomments_comment_control_submit';
-  }
-}
-
-/**
- * Submit function for comment control form
- */
-function slashcomments_comment_control_submit($form, &$form_state) {
-  global $user;
-  $threshold = $form_state['values']['threshold'];
-  $mode = $form_state['values']['mode'];
-  $order = $form_state['values']['order'];
-  $comments_per_page = $form_state['values']['comments_per_page'];
-
-  if ($user->uid) {
-    $account = user_save($user, array('threshold' => $threshold, 'mode' => $mode, 'sort' => $order, 'comments_per_page' => $comments_per_page));
-    // Terminate if an error occured during user_save().
-    if (!$account) {
-      drupal_set_message(t("Error saving user account."), 'error');
-      return;
-    }
-  }
-
-  $_SESSION['comment_threshold'] = $threshold;
-  $_SESSION['comment_mode'] = $mode;
-  $_SESSION['comment_sort'] = $order;
-  $_SESSION['comment_comments_per_page'] = $comments_per_page;
-}
-
-
-/**
- * Determine whether a given user can vote on a given comment
- */
-function slashcomments_user_can_vote($uid, $cid) {
-  /* skip controls for the super user */
-  if (user_access('bypass moderation restriction') || $uid == 1) {
-    return array('result' => 1, 'message' => '');
-  }
-
-  // keeps the status for checks which are comment independent
-  // to avoid executing them multiple times during comment rendering
-  static $result = NULL;
-
-  if ($result['step'] == 1) {
-    return $result;
-  }
-  elseif ($result['step'] != 2) {
-    $can_vote = 0;
-    global $user;
-    // check user has the needed permissiCon
-    if (!user_access('moderate comments')) {
-      $can_vote = -1;
-    }
-    elseif (strtotime("-" . _slashcomments_get_limit_newbie() . " day") < $user->created) {
-      $can_vote = -5;
-    }
-    elseif (_slashcomments_karma_enabled()
-      && slashcomments_get_user_karma($uid) < _slashcomments_get_limit_karma()) {
-      $can_vote = -2;
-    }
-    elseif (_slashcomments_get_mod_per_day() != SLASHCOMMENTS_INFINITE_MOD_POINTS && !_slashcomments_user_has_mod_points($uid)) {
-      $can_vote = -3;
-    }
-    else {
-      /* check if the moderator is the author of the node  */
-      $node_author = db_result(db_query("SELECT n.uid FROM {comments} c, {node} n WHERE c.cid=%d AND c.nid = n.nid", $cid));
-
-      if ($node_author == $uid) {
-        $can_vote = -4;
-      }
-    }
-  }
-  if ($can_vote < 0) {
-    $result = array('result' => 0, 'message' => _slashcomments_get_moderation_message($can_vote, $uid), 'step' => 1);
-    return $result;
-  }
-  $result = array('step' => 2);
-
-  // check if the user has already moderated this comment
-  if (votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'))) {
-    return array('result' => 0, 'message' => _slashcomments_get_moderation_message(-6, $uid));
-  }
-  // check if user is participating in the discussion
-  return slashcomments_user_participating_in_discussion($uid, $cid);
-}
-
-function _slashcomments_get_moderation_message($code, $uid) {
-  global $user;
-
-  $message = "";
-
-  switch ($code) {
-  case -1 :
-    $message = t("You don't have permission to moderate this comment");
-    break;
-  case -2 :
-    $message = t("You need a karma value of !karma before you can moderate this comment",
-      array('!karma' => _slashcomments_get_limit_karma()));
-    break;
-  case -3 :
-    $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
-
-    $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
-    $message = t("You don't have any moderation point. You'll get more in !timeleft",
-      array("!timeleft" => $time_str));
-    break;
-  case -4 :
-    $message = t("You can't moderate comments on your own content");
-    break;
-  case -5 :
-    $time_str = slashcomments_get_time_str($user->created - strtotime("-" . _slashcomments_get_limit_newbie() . " day"));
-    $message = t("Being a new user you have to wait !timeleft before you can moderate",
-      array("!timeleft" => $time_str));
-    break;
-  case -6 :
-    $message = t("You have already moderated this comment");
-    break;
-  case -7 :
-    $message = t("You can't moderate comments on contents you commented");
-    break;
-  case -8 :
-    $message = t("You can't moderate your own comment");
-    break;
-  case 1 :
-    if (_slashcomments_get_mod_per_day) {
-      $mod_points = slashcomments_get_user_mod_points($uid);
-      if ($mod_points) {
-        if ($mod_points == SLASHCOMMENTS_INFINITE_MOD_POINTS) {
-          //$mod_points = t('unlimited');
-          $message = '';
-        }
-        else {
-          $message = t("You have !modpoints moderation points left",
-            array('!modpoints' => $mod_points));
-        }
-      }
-      else {
-        $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
-
-        $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
-        $message = t("You don't have any moderation point. You'll get more in !timeleft",
-          array("!timeleft" => $time_str));
-      }
-    }
-    break;
-  }
-
-  return $message;
-}
-
-function slashcomments_get_time_str($timestamp) {
-  $secs_per_day = 60*60*24;
-  $secs_per_hour = 60*60;
-
-  $days = (int)($timestamp / $secs_per_day);
-  $timestamp -= $days * $secs_per_day;
-  $hours = (int)($timestamp  / $secs_per_hour);
-  $timestamp -= $hours * $secs_per_hour;
-  $minutes = (int)($timestamp / 60);
-
-  $output = "";
-  if ($days) {
-    $output .= $days . ' ' . t('Days');
-  }
-  if ($hours) {
-    if ($days) $output .= ' ';
-    $output .= $hours . ' ' . t('Hours');
-  }
-  if ($minutes) {
-    if ($hours) $output .= ' ';
-    $output .= $minutes . ' ' . t('Minutes');
-  }
-  return $output;
-}
-
-
-/**
- * Check whether user is participating in a given discussion
- */
-function slashcomments_user_participating_in_discussion($uid, $cid) {
-  // keeps this variable to avoid executing all the checks during
-  // multiple comments rendering
-  static $participating = -1;
-
-  // result has already been estabilished return it
-  if ($result) {
-    return $result;
-  }
-  if (_slashcomments_get_limit_takepart()) {
-    $sql = "SELECT count(*) cnt FROM {comments} c WHERE uid = %d AND nid
-      = (SELECT t.nid FROM {comments} t WHERE t.cid = %d)";
-
-    // get user's comments with nid
-    $user_cid = db_result(db_query($sql, $uid, $cid));
-    if ($user_cid == 0) {
-      $result = array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
-    }
-    else {
-      $result = array('result' => 0, 'message' => _slashcomments_get_moderation_message(-7, $uid));
-    }
-    return $result;
-  }
-  else {
-    // get nid of the discussion
-    $nid = db_result(db_query("SELECT count(*) FROM {comments} WHERE cid=%d AND uid=%d", $cid, $uid));
-    if ($nid == 0) {
-      return array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
-    }
-    return array('result' => 0, 'message' => _slashcomments_get_moderation_message(-8, $uid));
-  }
-}
-
-/**
- * Get the template file to use for the author pane
+ * Gets the template file to use for the author pane.
+ *
+ * Gets the proper template to use based on the fact advanced form is present 
+ * and the fact author pane is in stacked mode.
+ *
+ * @param $used_tpl_file
+ *   Template file currently in use.
+ *
+ * @return
+ *   Template file that is going to be used.
  */
 function _slashcomments_get_author_pane_template($used_tpl_file) {
 
@@ -881,7 +1355,12 @@ function _slashcomments_get_author_pane_template($used_tpl_file) {
   return $tpl_files[$used_tpl_file];
 }
 
-/* Retrieve the right template for author_pane and set it */
+/* 
+ * Retrieves the right template for author_pane and set it.
+ *
+ * @param $variables
+ *   Variables processed by author_pane preprocess functions.
+ */
 function _slashcomments_set_author_pane_template(&$variables) {
   static $new_tpl_file;
 
@@ -897,318 +1376,16 @@ function _slashcomments_set_author_pane_template(&$variables) {
 }
 
 /**
- * Implementation of hook_preprocess_author_pane().
- */
-function slashcomments_preprocess_author_pane(&$variables) {
-  _slashcomments_set_author_pane_template($variables);
-
-  // Add karma to template variables
-  if (_slashcomments_karma_enabled()) {
-    $variables['slashcomments_karma'] = slashcomments_get_user_karma($variables['account']->uid);
-  }
-}
-
-/**
- * FAPI definition for the comment moderation form.
- *
- * @ingroup forms
- * @see slashcomments_moderation_form_submit()
- */
-function slashcomments_moderation_form($form_state, $cid, $uid) {
-  $form['cid'] = array('#type' => 'hidden', '#default_value' => $cid);
-  $form['uid'] = array('#type' => 'hidden', '#default_value' => $uid);
-
-  $form['vote'] = array(
-    '#title' => '',
-    '#type' => 'select',
-    '#options' => _slashcomments_moderation_options(),
-    '#default_value' => 0,
-    '#weight' => 30
-  );
-
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Moderate'),
-    '#weight' => 50
-  );
-
-  $form['#submit'][] = 'slashcomments_moderation_form_submit';
-
-  return $form;
-}
-
-/**
- * Theme the moderation form
- */
-function theme_slashcomments_form_wrapper($cid, $uid, $message) {
-  $output =  '<div id="slashcomments-form-wrapper-' . $cid . '" class="scomments_container">';
-  $output .= '<div class="container-inline">';
-  $output .= '<div class="scomments_form">' .  drupal_get_form('slashcomments_moderation_form', $cid, $uid) . '</div>';
-  $output .= '<div class="scomments_loader"></div>';
-  $output .= '<div class="scomments_form_status description">' . $message . '</div>';
-  $output .= '</div></div>';
-  return $output;
-}
-
-/**
- * Retrieve comment rating
- */
-function slashcomments_get_comment_rating($cid) {
-  $score = _slashcomments_get_default_score();
-  $rating = '';
-  $has_rating = FALSE;
-
-  $sql = "SELECT r.score, o.rating
-    FROM {slashcomments_contents_rating} r, {slashcomments_rating_options} o
-    WHERE most_rated_id = o.rating_id and r.content_id = %d";
-
-  $result = db_query($sql, $cid);
-  $db_rating = db_fetch_object($result);
-
-  // if not result is retrieved set the default rating and description value
-  if ($db_rating) {
-    $score = $db_rating->score;
-    $rating = $db_rating->rating;
-    $has_rating = TRUE;
-  }
-
-  if (_slashcomments_karma_enabled()) {
-    $modifier = _slashcomments_get_content_karma_modifier($cid);
-    if ($modifier) {
-      $score += $modifier;
-      $has_rating = TRUE;
-    }
-  }
-
-  if ($has_rating == FALSE) {
-    $author_id = db_result(db_query("SELECT uid FROM {comments} WHERE cid = %d", $cid));
-    // Decrease the rating by 1 if the comment has been posted by an anonymous user
-    $score = ($author_id) ? _slashcomments_get_default_score() : _slashcomments_get_default_score_anonymous();
-  }
-
-  $score = ($score < -1) ? -1 : (($score > 5) ?  5 : $score);
-
-  // return rating and description
-  return array('score' => $score, 'rating' => $rating);
-}
-
-function slashcomments_upodate_all_ratings() {
-  $sql = "SELECT DISTINCT cid
-    FROM {votingapi_vote} v
-    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
-    AND v.value = o.rating_id AND v.content_id = %d";
-
-  $result = db_query($sql);
-
-  while ($cid = db_fetch_array($result)) {
-    slashcomments_update_rating($cid);
-  }
-}
-
-/**
- * Update rating for a given commment
- */
-function slashcomments_update_rating($content_id) {
-  //$row = db_fetch_object($result);
-  $rating = slashcomments_calculate_rating($content_id);
-  $rating['modified'] = time();
-
-  $exists = db_result(db_query("SELECT count(*) from {slashcomments_contents_rating} WHERE content_id = %d", $content_id));
-  if ($exists) {
-    $update = 'content_id';
-  }
-  else {
-    $update = NULL;
-    $rating['created'] = $rating['modified'];
-  }
-  $ret = drupal_write_record('slashcomments_contents_rating', $rating, $update);
-}
-
-/**
- * Update rating for a given commment
- */
-function slashcomments_init_contents_karma($cid, $author_uid = -1) {
-  if ($author_uid == -1) {
-    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
-  }
-
-  $karma = slashcomments_get_user_karma($author_uid);
-  if ($karma == _slashcomments_get_default_karma()) {
-    return;
-  }
-
-  $record['content_id'] = $cid;
-  $record['karma'] = $karma;
-  $record['created'] = $record['modified'] = time();
-  drupal_write_record('slashcomments_contents_karma', $record);
-}
-
-function _slashcomments_karma_enabled() {
-  return variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1;
-}
-
-function _slashcomments_get_content_karma_modifier($content_id) {
-  $sql = "SELECT km.modifier
-    FROM {slashcomments_contents_karma} ck, {slashcomments_karma_modifier} km
-    WHERE ck.karma BETWEEN km.karma_from AND km.karma_to
-    AND content_id=%d";
-
-  $modifier = db_result(db_query($sql, $content_id));
-  return ($modifier) ? $modifier : 0;
-}
-
-/**
- * Implementation of hook_voting_api_result_alter().
- */
-function slashcomments_calculate_rating($cid) {
-  $rating = array();
-
-  $sql = "
-    SELECT  v.content_id, c.uid,
-    SUM(o.score)  + CASE WHEN c.uid = 0 THEN %d ELSE %d  END score,
-    count(*) num_ratings
-    FROM {votingapi_vote} v, {slashcomments_rating_options} o,
-    (SELECT uid FROM {comments} WHERE cid = %d) c
-    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
-    AND v.value = o.rating_id AND v.content_id = %d
-    GROUP BY v.content_id, c.uid
-    ";
-
-  $result = db_query($sql, _slashcomments_get_default_score_anonymous(), _slashcomments_get_default_score(), $cid, $cid);
-  $rating = db_fetch_array($result);
-
-  /* extrat most voted rating including only positive/negative
-   * depending on the score */
-  $rating['most_rated_id'] = '';
-  $score_filter = $rating['score'] >= 1 ? ">= 0" : "< 0";
-
-  $sql = "SELECT o.rating_id, count(*), max(v.timestamp)
-    FROM {votingapi_vote} v, {slashcomments_rating_options} o
-    WHERE v.value = o.rating_id
-    AND v.content_type = 'comment' AND v.content_id = %d
-    AND v.value_type = 'option' AND v.tag = 'slashcomments'
-    AND o.score %s
-    GROUP BY o.rating_id
-    ORDER BY 2 DESC, 3 DESC, 1";
-
-  $row = db_fetch_object(db_query_range($sql, $cid, $score_filter, 0, 1));
-
-  $rating['most_rated_id'] = $row->rating_id;
-  return $rating;
-}
-
-function slashcomments_update_karma($uid) {
-  if ($uid == 0) {
-    return;
-  }
-
-  // min and max rating considering when karma is calculated
-  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d", $uid));
-  $comments_for_karma = _slashcomments_get_ratings_for_karma();
-  $lowest_for_karma = _slashcomments_get_lowest_score_for_karma();
-  $highest_for_karma = _slashcomments_get_highest_score_for_karma();
-
-  $has_karma = slashcomments_user_has_karma($uid);
-  if ($comments_num < $comments_for_karma) {
-    if ($has_karma) {
-      db_query("DELETE FROM {slashcomments_users_karma} WHERE uid = %d", $uid);
-    }
-    return;
-  }
-
-  $sql =  "SELECT AVG(CASE WHEN score <  %d THEN %d
-    WHEN score > %d THEN %d
-    ELSE score END ) karma,
-      SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
-      SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
-      FROM {slashcomments_contents_rating} r
-      WHERE r.uid = %d
-      HAVING count(*) >= %d";
-
-  $result = db_query($sql, $lowest_for_karma, $lowest_for_karma, $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
-  $record = db_fetch_object($result);
-  $record->uid = $uid;
-  $record->total = $comments_num;
-  $record->neutral = $record->total - $record->positive - $record->negative;
-  $record->modified = time();
-  if ($has_karma) {
-    $update = 'uid';
-  }
-  else {
-    $update = NULL;
-    $record->created = $record->modified;
-  }
-
-  drupal_write_record('slashcomments_users_karma', $record, $update);
-}
-
-
-function slashcomments_user_has_karma($uid) {
-  $sql =  "SELECT count(*)
-    FROM {slashcomments_users_karma}
-    WHERE uid = %d";
-
-  $has_karma = db_result(db_query($sql, $uid));
-
-  return ($has_karma) ? TRUE : FALSE;
-}
-
-
-function slashcomments_get_user_karma($uid) {
-  //return NULL;
-  $sql =  "SELECT karma
-    FROM {slashcomments_users_karma}
-    WHERE uid = %d";
-
-  $karma = db_result(db_query($sql, $uid));
-
-  if ($karma === FALSE OR $karma === NULL) {
-    $karma = _slashcomments_get_default_karma();
-  }
-  elseif ($karma >= -1) {
-    $karma = -1
-  }
-  elseif ($karma == 5) {
-    $karma = 5
-  }
-  return $karma;
-}
-
-
-/**
- * Implementation of hook_user().
- */
-function slashcomments_user($op, &$edit, &$account, $category = 'account') {
-  switch ($op) {
-  case 'view':
-    if (!_slashcomments_karma_enabled()) {
-      break;
-    }
-
-    $user_karma = slashcomments_get_user_karma($account->uid);
-
-    $account->content['slashcomments_karma'] = array(
-      '#type' => 'user_profile_category',
-      '#title' => t('Karma'),
-      '#weight' => 10,
-    );
-    $account->content['slashcomments_karma']['karma'] = array(
-      '#title' => t('Current value'),
-      '#type' => 'user_profile_item',
-      '#value' => $user_karma,
-      '#weight' => 1,
-    );
-    break;
-  }
-}
-
-/**
  * Get available ratings
+ *
+ * @return
+ *  Array of available ratings. Array keys are rating id and values are 
+ *  ratings descriptions
  */
 function _slashcomments_moderation_options() {
   static $rating_options;
 
+  // query the database only once for each request
   if (!$rating_options) {
     /* extract enabled ratings from the db */
     $sql = "SELECT rating_id, rating
@@ -1228,6 +1405,16 @@ function _slashcomments_moderation_options() {
   return $rating_options;
 }
 
+/* 
+ * Retrieves thresholds for node and settings.
+ *
+ * @node 
+ *  Node being displayed. Used to calculate how many comments will be 
+ *  displayed for each selected threshold
+ *
+ * @retunrn
+ *  Array of available options to be used in a drop-down list
+ */
 function _slashcomments_thresholds($node = NULL) {
 
   // Possible threshold value
@@ -1295,6 +1482,12 @@ function _slashcomments_thresholds($node = NULL) {
   return $options;
 }
 
+/*
+ * Gets available options for displayng comments.
+ *
+ * @return
+ *  Array of available options
+ */
 function _slashcomments_modes() {
   return array(
     SLASHCOMMENTS_MODE_FLAT => t('Display: flat'),
@@ -1302,6 +1495,12 @@ function _slashcomments_modes() {
   );
 }
 
+/*
+ * Gets available options for number of comments to show in each page
+ *
+ * @return 
+ *  Arrays of available options
+ */
 function _slashcomments_per_page() {
   $per_page = array(10, 30, 50, 70, 90, 150, 200, 250, 300, 1000);
   $options = array();
@@ -1312,7 +1511,7 @@ function _slashcomments_per_page() {
 }
 
 /**
- * Get display settings for a given content
+ * Gets display settings for a given content
  */
 function _slashcomments_get_display_setting($setting, $node) {
   global $user;
@@ -1355,62 +1554,67 @@ function _slashcomments_get_display_setting($setting, $node) {
   return $value;
 }
 
-/* get values of the limit_newbie settings variable */
+/* Gets values of the limit_newbie settings variable */
 function _slashcomments_get_limit_newbie() {
   return variable_get('slashcomments_limit_newbie', SLASHCOMMENTS_LIMIT_NEWBIE);
 }
 
-/* get values of the limit_newbie settings variable */
+/* Gets values of the limit_newbie settings variable */
 function _slashcomments_get_limit_karma() {
   return variable_get('slashcomments_limit_karma', SLASHCOMMENTS_LIMIT_KARMA);
 }
 
-/* get values of the limit_newbie settings variable */
+/* Gets values of the limit_newbie settings variable */
 function _slashcomments_get_limit_takepart() {
   return variable_get('slashcomments_limit_takepart', SLASHCOMMENTS_LIMIT_TAKEPART);
 }
 
-/* get values of the default_score settings variable */
+/* Gets values of the default_score settings variable */
 function _slashcomments_get_default_score() {
   return variable_get('slashcomments_default_score', SLASHCOMMENTS_DEFAULT_SCORE);
 }
 
-/* get values of the default_score_anonymous settings variable */
+/* Gets values of the default_score_anonymous settings variable */
 function _slashcomments_get_default_score_anonymous() {
   return variable_get('slashcomments_default_score_anonymous', SLASHCOMMENTS_DEFAULT_SCORE_ANONYMOUS);
 }
 
-/* get values of the default_karma settings variable */
+/* Gets values of the default_karma settings variable */
 function _slashcomments_get_default_karma() {
   return variable_get('slashcomments_default_karma', SLASHCOMMENTS_DEFAULT_KARMA);
 }
 
-/* get values of the rating_for_karma settings variable */
+/* Gets values of the rating_for_karma settings variable */
 function _slashcomments_get_ratings_for_karma() {
   return variable_get('slashcomments_ratings_for_karma', SLASHCOMMENTS_RATINGS_FOR_KARMA);
 }
 
-/* get values of the mod_per_day settings variable */
+/* Gets values of the mod_per_day settings variable */
 function _slashcomments_get_mod_per_day() {
   return variable_get('slashcomments_mod_per_day', SLASHCOMMENTS_MOD_PER_DAY);
 }
 
-/* get values of the help_page_path settings variable */
+/* Gets values of the help_page_path settings variable */
 function _slashcomments_get_help_page_path() {
   return variable_get('slashcomments_help_page_path', SLASHCOMMENTS_HELP_PAGE_PATH);
 }
 
-/* get values of the lowest rating for karma settings variable */
+/* Gets values of the lowest rating for karma settings variable */
 function _slashcomments_get_lowest_score_for_karma() {
   return variable_get('slashcomments_lowest_score_for_karma', SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA);
 }
 
-/* get values of the highest rating for karma settings variable */
+/* Gets values of the highest rating for karma settings variable */
 function _slashcomments_get_highest_score_for_karma() {
   return variable_get('slashcomments_highest_score_for_karma', SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA);
 }
 
-/* get the url of slashcomments images folder */
+/* Getss value of the enable karma variables */
+function _slashcomments_karma_enabled() {
+  return variable_get('slashcomments_enable_karma', SLASHCOMMENTS_ENABLE_KARMA) == 1;
+}
+
+/* Gets the url of slashcomments images folder */
 function _slashcomments_get_image_path() {
   static $image_path;
   if (!$image_path) {
@@ -1419,13 +1623,26 @@ function _slashcomments_get_image_path() {
   return $image_path;
 }
 
+/*
+ * Gets moderation point for aq given user
+ *
+ * @param $uid
+ *  Identifier of the user we're retrieving points for
+ *
+ * @return
+ *  Number of moderation points left. It returns 
+ *  SLASH_COMMENTS_INFINITE_MOD_POINTS for user with the 'bypass moderation 
+ *  restriciton' permission
+ */
 function slashcomments_get_user_mod_points($uid) {
 
+  // Infinite moderation if user bypass restriction or if it's been set that way
   if (user_access('bypass moderation restriction') || $uid == 1
     || _slashcomments_get_mod_per_day() == SLASHCOMMENTS_INFINITE_MOD_POINTS) {
-      return -1;
+      return SLASHCOMMENTS_INFINITE_MOD_POINTS;
     }
 
+  // Gets user mod points from the db
   $sql = "SELECT uid, points, assigned
     FROM {slashcomments_users_mod_points}
     WHERE uid = %d";
@@ -1434,19 +1651,34 @@ function slashcomments_get_user_mod_points($uid) {
   $data = db_fetch_array(db_query($sql, $uid));
 
   if (!$data) {
+  // If user has no points yet assing them 
     $points = slashcomments_assign_user_mod_points($uid, 1);
   }
   elseif (time() - $data['assigned'] > (60*60*24)) {
+  // If needed time has passed assign new points to the user
     $points =  slashcomments_assign_user_mod_points($uid, 0);
   }
   else {
+    // otherwise return points stored
     $points = $data['points'];
   }
 
   return $points;
 }
 
-
+/*
+ * Assign moderation points to a given user
+ *
+ * @param $uid
+ *  Identifier of the user points will be assigned
+ *
+ * @paran $new
+ *  1 if the user has never been assigned points
+ *  0 if the user has being assigned points before
+ *
+ * @return
+ *  Number of points assigned
+ */
 function slashcomments_assign_user_mod_points($uid, $new = -1) {
   if ($new == -1) {
     $new = !db_result(db_query("SELECT count(*) FROM {slashcomments_users_mod_points}"));
@@ -1464,10 +1696,22 @@ function slashcomments_assign_user_mod_points($uid, $new = -1) {
   return slashcomments_get_user_mod_points($uid);
 }
 
+/*
+ * Checks if user has moderation points left
+ *
+ * @return
+ *  TRUE or FALSE depending or wheter the user has points left
+ */
 function _slashcomments_user_has_mod_points($uid) {
   return (slashcomments_get_user_mod_points($uid) > 0) ? TRUE : FALSE;
 }
 
+/*
+ * Consume a moderation point.
+ *
+ * @param $uid
+ *  Identifier of the user 
+ */
 function slashcomments_use_mod_point($uid) {
   if (user_access('bypass moderation restriction') || $uid == 1) {
     return;
@@ -1479,3 +1723,130 @@ function slashcomments_use_mod_point($uid) {
 
   db_query($sql, $uid);
 }
+
+/* 
+ * Get moderation strings according to the result of moderationn
+ *
+ * @param $code
+ *  Result code of the moderation has returned from the can_moderate funtion
+ *
+ * @parma $uid
+ *  Identifier of the user the message has been displayed to
+ *
+ * @return
+ *  Text message related to user status regarding moderation
+ */
+function _slashcomments_get_moderation_message($code, $uid) {
+  global $user;
+
+  $message = "";
+
+  switch ($code) {
+  case -1 :
+    $message = t("You don't have permission to moderate this comment");
+    break;
+  case -2 :
+    $message = t("You need a karma value of !karma before you can moderate this comment",
+      array('!karma' => _slashcomments_get_limit_karma()));
+    break;
+  case -3 :
+    $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
+
+    $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
+    $message = t("You don't have any moderation point. You'll get more in !timeleft",
+      array("!timeleft" => $time_str));
+    break;
+  case -4 :
+    $message = t("You can't moderate comments on your own content");
+    break;
+  case -5 :
+    $time_str = slashcomments_get_time_str($user->created - strtotime("-" . _slashcomments_get_limit_newbie() . " day"));
+    $message = t("Being a new user you have to wait !timeleft before you can moderate",
+      array("!timeleft" => $time_str));
+    break;
+  case -6 :
+    $message = t("You have already moderated this comment");
+    break;
+  case -7 :
+    $message = t("You can't moderate comments on contents you commented");
+    break;
+  case -8 :
+    $message = t("You can't moderate your own comment");
+    break;
+  case 1 :
+    if (_slashcomments_get_mod_per_day) {
+      $mod_points = slashcomments_get_user_mod_points($uid);
+      if ($mod_points) {
+        if ($mod_points == SLASHCOMMENTS_INFINITE_MOD_POINTS) {
+          //$mod_points = t('unlimited');
+          $message = '';
+        }
+        else {
+          $message = t("You have !modpoints moderation points left",
+            array('!modpoints' => $mod_points));
+        }
+      }
+      else {
+        $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
+
+        $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
+        $message = t("You don't have any moderation point. You'll get more in !timeleft",
+          array("!timeleft" => $time_str));
+      }
+    }
+    break;
+  }
+
+  return $message;
+}
+
+/*
+ * Returns days,  hours and minutes correspondings 
+ * to seconds in a given timestamp.
+ *
+ * @param $timestamp
+ *  Seconds to be splitted in days, hours and minutes
+ *
+ * @return
+ *  String representation of given seconds in the format
+ *  x days y hours z minutes
+ */
+function slashcomments_get_time_str($timestamp) {
+  $secs_per_day = 60*60*24;
+  $secs_per_hour = 60*60;
+
+  $days = (int)($timestamp / $secs_per_day);
+  $timestamp -= $days * $secs_per_day;
+  $hours = (int)($timestamp  / $secs_per_hour);
+  $timestamp -= $hours * $secs_per_hour;
+  $minutes = (int)($timestamp / 60);
+
+  $output = "";
+  if ($days) {
+    $output .= $days . ' ' . t('Days');
+  }
+  if ($hours) {
+    if ($days) $output .= ' ';
+    $output .= $hours . ' ' . t('Hours');
+  }
+  if ($minutes) {
+    if ($hours) $output .= ' ';
+    $output .= $minutes . ' ' . t('Minutes');
+  }
+  return $output;
+}
+
+/*
+function slashcomments_upodate_all_ratings() {
+  $sql = "SELECT DISTINCT cid
+    FROM {votingapi_vote} v
+    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
+    AND v.value = o.rating_id AND v.content_id = %d";
+
+  $result = db_query($sql);
+
+  while ($cid = db_fetch_array($result)) {
+    slashcomments_update_rating($cid);
+  }
+}*/
+
