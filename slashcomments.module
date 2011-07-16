@@ -229,7 +229,7 @@ function slashcomments_user_can_moderate($uid, $cid) {
 
   // keeps the status for checks which are comment independent
   // to avoid executing them multiple times during comment rendering
-  static $result = array('result' => 0, 'message' => '', 'step' => 1);
+  static $result = array('result' => 0, 'message' => '', 'step' => 0);
 
   // comment indipendent checks has given a negative result, exit
   if ($result['step'] == 1) {
@@ -274,7 +274,6 @@ function slashcomments_user_can_moderate($uid, $cid) {
   }
 
   $result = array('step' => 2);
-
   // check if the user has already moderated this comment
   if (votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'))) {
     $result['message'] = _slashcomments_get_moderation_message(-6, $uid);
@@ -1002,7 +1001,7 @@ function slashcomments_preprocess_comment(&$variables) {
 
   // add karma if it's enabled
   if (_slashcomments_karma_enabled()) {
-    $variables['slashcomments_karma'] = theme('slashcomments_karma', slashcomments_get_user_display_karma($variables['account']->uid));
+    $variables['slashcomments_karma'] = theme('slashcomments_karma', slashcomments_get_user_display_karma($comment->uid));
   }
 
   // get default threshold for the content type
@@ -1401,7 +1400,6 @@ function _slashcomments_moderation_options() {
       $rating_options[$rating->rating_id] = $rating->rating;
     }
   }
-
   return $rating_options;
 }
 
@@ -1437,10 +1435,9 @@ function _slashcomments_thresholds($node = NULL) {
     $rating_field = 'score';
     if (_slashcomments_karma_enabled()) {
       $sql = "
-        SELECT score, sum(num) num
+        SELECT score, count(*) num
         FROM (
-          SELECT IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END)+IFNULL(m.modifier, 0) score,
-          count(*) num
+          SELECT IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END)+IFNULL(m.modifier, 0) score
           FROM {comments} c LEFT JOIN {slashcomments_contents_rating} r
           ON c.cid = r.content_id
           LEFT JOIN {slashcomments_contents_karma} k
@@ -1448,19 +1445,16 @@ function _slashcomments_thresholds($node = NULL) {
           LEFT JOIN {slashcomments_karma_modifier} m
           ON k.karma >= m.karma_from AND k.karma <= m.karma_to
           WHERE c.nid = %d
-          GROUP BY c.uid, IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END)+IFNULL(m.modifier, 0)
         ) a
         GROUP BY score";
     }
     else {
-      $sql = "SELECT score, sum(num) num
+      $sql = "SELECT score, count(*) num
         FROM (
-          SELECT IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END) score,
-          count(*) num
+          SELECT IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END) score
           FROM {comments} c LEFT JOIN {slashcomments_contents_rating} r
           ON c.cid = r.content_id
           WHERE c.nid = %d
-          GROUP BY c.uid, IFNULL(r.score, CASE WHEN c.uid = 0 THEN %d ELSE %d END)
         ) a
         GROUP BY score";
     }
@@ -1703,7 +1697,8 @@ function slashcomments_assign_user_mod_points($uid, $new = -1) {
  *  TRUE or FALSE depending or wheter the user has points left
  */
 function _slashcomments_user_has_mod_points($uid) {
-  return (slashcomments_get_user_mod_points($uid) > 0) ? TRUE : FALSE;
+  $points = slashcomments_get_user_mod_points($uid);
+  return ($points > 0 || $points == SLASHCOMMENTS_INFINITE_MOD_POINTS) ? TRUE : FALSE;
 }
 
 /*
