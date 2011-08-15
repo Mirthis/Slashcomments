@@ -1312,7 +1312,7 @@ function _slashcomments_add_comment_template_files($new_tpl_file) {
   // add base url and other needed js variables
   drupal_add_js(
     array(
-      'baseUrl'  => $GLOBALS['base_url'],
+      'baseUrl'  => url($GLOBALS['base_url']),
       'slashdot' => array('error_status' => t("Error moderationg comment"),
       'load_image_path' => _slashcomments_get_image_path() . '/loading.gif')
     ),
