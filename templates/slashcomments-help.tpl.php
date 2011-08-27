@@ -5,5 +5,3 @@
  * @file
  */
 ?>
-
-Yet to be written!

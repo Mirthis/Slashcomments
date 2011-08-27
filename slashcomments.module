@@ -27,7 +27,7 @@ define('SLASHCOMMENTS_LIMIT_TAKEPART', 1);
 // days before newbie users can post
 define('SLASHCOMMENTS_LIMIT_NEWBIE', 14);
 // enable karma
-define('SLASHCOMMENTS_ENABLE_KARMA', 0);
+define('SLASHCOMMENTS_ENABLE_KARMA', 1);
 // limit moderation based on karma value
 define('SLASHCOMMENTS_LIMIT_KARMA', 2);
 // initial karma value
@@ -42,7 +42,6 @@ define('SLASHCOMMENTS_HELP_PAGE_PATH', 'slashcomments/help');
 define('SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA', -6);
 // Higher score valid for karma
 define('SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA', 8);
-
 
 /**
  * Implementation of hook_views_api().
@@ -117,17 +116,6 @@ function slashcomments_menu() {
     'file' => 'slashcomments.admin.inc',
   );
 
-  // Add the mantain tab to the settings page
-  /*$items['admin/settings/slashcomments/mantain'] = array(
-    'title' => 'Maintanance',
-    'weight' => 3,
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('slashcomments_admin_mantain_form'),
-    'access arguments' => array('administer slashcomments'),
-    'type' => MENU_LOCAL_TASK,
-    'file path' => drupal_get_path('module', 'slashcomments') . '/includes/',
-    'file' => 'slashcomments.admin.inc',
-  );*/
 
   // Add the callback to the public help page
   $items['slashcomments/help'] = array(
@@ -143,6 +131,23 @@ function slashcomments_menu() {
 
   return $items;
 }
+
+function slashcomments_enable() {
+  $batch  = array(
+    'operations' => array(
+      array('slashcomments_batch_init_ratings', array()),
+  ),
+  'finished' => 'slashcomments_batch_init_ratings_finished',
+  'title' => t('Update or initialize slashcomments data structure.'),
+  'init_message' => t('Data update is starting.'),
+  'progress_message' => t('Processed @current out of @total.'),
+  'error_message' => t('Data update has encountered an error.'),
+  'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
+);
+
+  batch_set($batch);
+}
+
 
 /**
  * Implementation of hook_theme().
@@ -183,6 +188,7 @@ function slashcomments_theme() {
   $items['slashcomments_karma'] = array(
     'arguments' => array('karma' => NULL),
   );
+
 
   return $items;
 }
@@ -362,7 +368,7 @@ function slashcomments_load_comment() {
 
   // retrieve comment output
   $out = comment_render($node, $_POST['cid']);
-  
+
   // Make the result available for the ajax handler
   drupal_json(array(
     'status' => 'OK',
@@ -460,7 +466,9 @@ function slashcomments_store_vote($cid, $vote) {
   // If karma is enabled updated its value
   if (_slashcomments_karma_enabled()) {
     slashcomments_update_karma($author_uid);
+    slashcomments_update_contents_karma($cid);
   }
+
   $result['message'] = t('Comment moderated!') . ' ';
   $result['message'] .= _slashcomments_get_moderation_message(1, $user->uid);
   return $result;
@@ -483,10 +491,6 @@ function slashcomments_delete_rating($cid) {
 
   db_query($delete_votes, $cid);
 
-  if (db_affected_rows() < 1) {
-    return;
-  }
-
   $author_uid = db_result(db_query("SELECT uid FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid));
   votingapi_recalculate_results('comment', $cid, TRUE);
   db_query("DELETE FROM {slashcomments_contents_rating} WHERE content_id = %d", $cid);
@@ -499,8 +503,8 @@ function slashcomments_delete_rating($cid) {
 /**
  * Retrieves content rating.
  *
- * Get comment score and rating for a specific content. Only comments are 
- * currently supported.
+ * Get comment score and rating for a specific content. 
+ * Only comments are currently supported.
  *
  * @param $cid
  *   Comment id of the comments
@@ -511,47 +515,79 @@ function slashcomments_delete_rating($cid) {
  *   'rating' => text correspoding to the most voted rating
  */
 function slashcomments_get_content_rating($cid) {
-  $score = _slashcomments_get_default_score();
-  $rating = '';
-  $has_rating = FALSE;
+  $result = array();
 
-  $sql = "SELECT r.score, o.rating
-    FROM {slashcomments_contents_rating} r, {slashcomments_rating_options} o
-    WHERE most_rated_id = o.rating_id and r.content_id = %d";
-
-  // Get score and rating for the comment
-  $result = db_query($sql, $cid);
-  $db_rating = db_fetch_object($result);
-
-  // if no result is retrieved set the default rating and description value
-  if ($db_rating) {
-    $score = $db_rating->score;
-    $rating = $db_rating->rating;
-    $has_rating = TRUE;
-  }
-
-  // if karma is enabled get karma modified score
   if (_slashcomments_karma_enabled()) {
-    $modifier = _slashcomments_get_content_karma_modifier($cid);
-    if ($modifier) {
-      $score += $modifier;
-      $has_rating = TRUE;
-    }
+    $result = slashcomments_get_content_karma_rating($cid);
   }
-
-  // If no rating information has been retrieved from the db check if it's 
-  // author is anonymous and apply modifier to the default rating if needed
-  if ($has_rating == FALSE) {
+  else {
+    $result = slashcomments_get_content_plan_rating($cid);
+  }
+  /*If no rating information has been retrieved from the db check if it's 
+  author is anonymous and apply modifier to the default rating if needed */
+  if (!$result) {
     $author_id = db_result(db_query("SELECT uid FROM {comments} WHERE cid = %d", $cid));
-    $score = ($author_id) ? _slashcomments_get_default_score() : _slashcomments_get_default_score_anonymous();
+    $result['score'] = ($author_id) ? _slashcomments_get_default_score() : _slashcomments_get_default_score_anonymous();
   }
-
   // Avoid having an infinite score scale limiting min and max score value
-  $score = ($score < SLASHCOMMENTS_LOWEST_DISPLAY_RATING) ? SLASHCOMMENTS_LOWEST_DISPLAY_RATING 
-    : (($score > SLASHCOMMENTS_HIGHEST_DISPLAY_RATING) ?  SLASHCOMMENTS_HIGHEST_DISPLAY_RATING : $score);
+  $result['score'] = slashcomments_limit_displayed_score($result['score']);
 
   // return score and rating
-  return array('score' => $score, 'rating' => $rating);
+  return $result;
+}
+
+/**
+ * Retrieves plan comment rating.
+ *
+ * Get comment score and rating for a specific content without applying any 
+ * modifier (i.e.: karma)
+ *
+ * @param $cid
+ *   Comment id of the comments
+ *
+ * @return
+ *   Array containing score and rating
+ *   'score' => numeric score associated to the comment
+ *   'rating' => text correspoding to the most voted rating
+ */
+function slashcomments_get_content_plan_rating($cid) {
+  $sql = "SELECT r.score, o.rating
+    FROM {slashcomments_contents_rating} r
+    LEFT JOIN {slashcomments_rating_options} o
+    ON r.most_rated_id = o.rating_id 
+    WHERE r.content_id = %d";
+
+  return db_fetch_array(db_query($sql, $cid));
+}
+
+/**
+ * Retrieves karma modified comment rating.
+ *
+ * Get comment score and rating for a specific content applying karma modifier
+ *
+ * @param $cid
+ *   Comment id of the comments
+ *
+ * @return
+ *   Array containing score and rating
+ *   'score' => numeric score associated to the comment
+ *   'rating' => text correspoding to the most voted rating
+ */
+function slashcomments_get_content_karma_rating($cid) {
+  $sql = "SELECT IFNULL(k.score, r.score) score, o.rating
+    FROM {slashcomments_contents_rating} r 
+    LEFT JOIN {slashcomments_contents_karma} k
+    ON r.content_id = k.content_id
+    LEFT JOIN {slashcomments_rating_options} o
+    ON r.most_rated_id = o.rating_id 
+    WHERE r.content_id = %d";
+
+  return db_fetch_array(db_query($sql, $cid));
+}
+
+function slashcomments_limit_displayed_score($score) {
+  return ($score < SLASHCOMMENTS_LOWEST_DISPLAY_RATING) ? SLASHCOMMENTS_LOWEST_DISPLAY_RATING 
+    : (($score > SLASHCOMMENTS_HIGHEST_DISPLAY_RATING) ?  SLASHCOMMENTS_HIGHEST_DISPLAY_RATING : $score);
 }
 
 /**
@@ -584,10 +620,10 @@ function slashcomments_update_rating($content_id) {
 }
 
 /**
- * Sets the initial rating for a given content.
+ * Sets karma information for a given content.
  *
  * When a content is submitted it's initial score depends on the user karma. If 
- * the score is different from the default score it needs to be stored to be 
+ * this score is different from the default score it needs to be stored to be 
  * used lately when the score is retrieved.
  *
  * @param $cid
@@ -596,25 +632,52 @@ function slashcomments_update_rating($content_id) {
  * @param $author_uid
  *   Identifier of the user who posted the content
  */
-function slashcomments_init_contents_karma($cid, $author_uid = -1) {
-  // If author is not passed to the function retrieve it from the database
-  if ($author_uid == -1) {
-    $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
-  }
+function slashcomments_init_contents_karma($cid, $author_uid, $use_default=FALSE) {
 
   // If user karma has the default value no modifier is applied
-  // @TODO check modifier associated to the karma value and not karma value 
-  // itself
-  $karma = slashcomments_get_user_karma($author_uid);
-  if ($karma == _slashcomments_get_default_karma()) {
-    return;
-  }
+  $karma = ($use_default) ? _slashcomments_get_default_karma() :  slashcomments_get_user_karma($author_uid);
+  $modifier = _slashcomments_get_karma_modifier($karma);
 
-  // Assign values to missing filed and store the info
+  // assign values to missing filed and store the info
   $record['content_id'] = $cid;
   $record['karma'] = $karma;
   $record['created'] = $record['modified'] = time();
+  $record['score'] = SLASHCOMMENTS_DEFAULT_SCORE + $modifier;
   drupal_write_record('slashcomments_contents_karma', $record);
+}
+
+/**
+ * Sets karma information for a given content.
+ *
+ * When a content is submitted it's initial score depends on the user karma. If 
+ * this score is different from the default score it needs to be stored to be 
+ * used lately when the score is retrieved.
+ *
+ * @param $cid
+ *   Content_id for the content the initial value is going to be assigned
+ *
+ * @param $author_uid
+ *   Identifier of the user who posted the content
+ */
+function slashcomments_update_contents_karma($cid) {
+
+  $record = array();
+
+  $sql = "SELECT r.score, km.modifier
+    FROM {slashcomments_contents_rating} r,
+{slashcomments_contents_karma} k,
+{slashcomments_karma_modifier} km
+WHERE r.content_id = k.content_id 
+AND k.karma BETWEEN km.karma_from AND km.karma_to
+AND r.content_id = %d";
+
+$result = db_fetch_array(db_query($sql, $cid));
+$record['score'] = $result['score'] + $result['modifier'];
+
+// assign values to missing filed and store the info
+$record['content_id'] = $cid;
+$record['modified'] = time();
+drupal_write_record('slashcomments_contents_karma', $record, 'content_id');
 }
 
 /**
@@ -642,6 +705,27 @@ function _slashcomments_get_content_karma_modifier($content_id) {
 }
 
 /**
+ * Gets score modifier for a given karma karma.
+ *
+ * @param $karma
+ *   Karma value 
+ *
+ * @return
+ *   An integer indicating the increase/decrease to apply to the score
+ */
+function _slashcomments_get_karma_modifier($karma) {
+  $sql = "SELECT km.modifier
+    FROM {slashcomments_karma_modifier} km
+    WHERE %d BETWEEN km.karma_from AND km.karma_to";
+
+  // Gets the modifier from the database
+  $modifier = db_result(db_query($sql, $karma));
+  // Return the vale or 0 if it wasn't found
+  return ($modifier) ? $modifier : 0;
+}
+
+
+/**
  * Calculates rating for a given content.
  *
  * @param $cid
@@ -659,18 +743,22 @@ function slashcomments_calculate_rating($cid) {
   $rating = array();
 
   $sql = "
-    SELECT  v.content_id, c.uid,
-    SUM(o.score)  + CASE WHEN c.uid = 0 THEN %d ELSE %d  END score,
-    count(*) num_ratings
-    FROM {votingapi_vote} v, {slashcomments_rating_options} o,
-    (SELECT uid FROM {comments} WHERE cid = %d) c
-    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
-    AND v.value = o.rating_id AND v.content_id = %d
+    SELECT  c.cid content_id, c.uid,
+    IFNULL(SUM(o.score),0)  + CASE WHEN c.uid = 0 THEN %d ELSE %d  END score,
+    count(v.vote_id) num_ratings,
+    max(v.timestamp) last_rated
+    FROM {comments} c
+    LEFT JOIN {votingapi_vote} v
+    ON v.content_id = c.cid
+    AND  v.content_type = 'comment' AND v.tag = 'slashcomments'  
+    LEFT JOIN {slashcomments_rating_options} o
+    ON v.value = o.rating_id 
+    WHERE c.cid = %d
     GROUP BY v.content_id, c.uid
     ";
 
   // Get score info from the db
-  $result = db_query($sql, _slashcomments_get_default_score_anonymous(), _slashcomments_get_default_score(), $cid, $cid);
+  $result = db_query($sql, _slashcomments_get_default_score_anonymous(), _slashcomments_get_default_score(), $cid);
   $rating = db_fetch_array($result);
 
   // extrat most voted rating including only positive/negative
@@ -690,7 +778,7 @@ function slashcomments_calculate_rating($cid) {
   $row = db_fetch_object(db_query_range($sql, $cid, $score_filter, 0, 1));
 
   // Add the most_rated_id and return the result
-  $rating['most_rated_id'] = $row->rating_id;
+  $rating['most_rated_id'] = $row->rating_id ? $row->rating_id : -1;
   return $rating;
 }
 
@@ -706,7 +794,7 @@ function slashcomments_update_karma($uid) {
   }
 
   // min and max rating considering when karma is calculated
-  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d", $uid));
+  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d AND num_ratings <> 0", $uid));
   $comments_for_karma = _slashcomments_get_ratings_for_karma();
   $lowest_for_karma = _slashcomments_get_lowest_score_for_karma();
   $highest_for_karma = _slashcomments_get_highest_score_for_karma();
@@ -728,6 +816,7 @@ function slashcomments_update_karma($uid) {
       SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
       FROM {slashcomments_contents_rating} r
       WHERE r.uid = %d
+      AND r.num_ratings <> 0
       HAVING count(*) >= %d";
 
   // Extract the data and fill missing fields
@@ -805,8 +894,7 @@ function slashcomments_get_user_karma($uid) {
  */
 function slashcomments_get_user_display_karma($uid) {
   $karma = slashcomments_get_user_karma($uid);
-  $display_karma = ($karma < SLASHCOMMENTS_LOWEST_DISPLAY_RATING) ? SLASHCOMMENTS_LOWEST_DISPLAY_RATING 
-    : (($karma > SLASHCOMMENTS_HIGHEST_DISPLAY_RATING) ?  SLASHCOMMENTS_HIGHEST_DISPLAY_RATING : $karma);
+  $display_karma = slashcomments_limit_displayed_score($karma);
   return $display_karma;
 }
 
@@ -987,7 +1075,6 @@ function slashcomments_preprocess_comment(&$variables) {
   _slashcomments_set_comment_template($variables);
   // get score and rating
   $rating = slashcomments_get_content_rating($comment->cid);
-
   $variables['slashcomments_rating'] = theme('slashcomments_rating', $rating);
 
   $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
@@ -1080,6 +1167,9 @@ function slashcomments_comment($comment, $op) {
     }
     break;
   case 'insert':
+
+    slashcomments_update_rating($cid);
+
     // if karma is enable apply a modifier to the initial comment rating
     if (_slashcomments_karma_enabled()) {
       slashcomments_init_contents_karma($comment['cid'], $comment['uid']);
@@ -1197,12 +1287,12 @@ function theme_slashcomments_moderation_status($result) {
 function theme_slashcomments_rating($rating) {
   $icon_url = _slashcomments_get_image_path() . '/question_mark.png';
   $icon_url_2 = _slashcomments_get_image_path() . '/forbidden.png';
-  $help_page = url(_slashcomments_get_help_page_path());
+  $help_page = _slashcomments_get_help_page_path();
 
   $output = '<span class="scomments_rating">';
   $output .= '(' . t('Score') . ': ' . $rating['score'];
   $output .= ($rating['rating']) ? ' ' . $rating['rating'] : '';
-  $output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url .'" /></a>';
+  $output .= ($help_page) ? '<a alt="What is this?" title="What is this?" href="' . url($help_page) . '"><img class="help_icon" src="'. $icon_url .'" /></a>' : '';
   //$output .= '<a alt="What is this?" title="What is this?" href="' . $help_page . '"><img class="help_icon" src="'. $icon_url_2 .'" /></a>';
   $output .= ')';
   $output .= '</span>';
@@ -1645,11 +1735,11 @@ function slashcomments_get_user_mod_points($uid) {
   $data = db_fetch_array(db_query($sql, $uid));
 
   if (!$data) {
-  // If user has no points yet assing them 
+    // If user has no points yet assing them 
     $points = slashcomments_assign_user_mod_points($uid, 1);
   }
   elseif (time() - $data['assigned'] > (60*60*24)) {
-  // If needed time has passed assign new points to the user
+    // If needed time has passed assign new points to the user
     $points =  slashcomments_assign_user_mod_points($uid, 0);
   }
   else {

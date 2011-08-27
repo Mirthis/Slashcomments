@@ -240,7 +240,8 @@ function slashcomments_admin_ratings_form_submit($form, &$form_state) {
     if (array_diff($posted_options[$id], $stored_options[$id])) {
       $sql = "UPDATE {slashcomments_rating_options}
         SET rating = '%s', score = %d, enabled = %d, weight = %d
-        WHERE rating_id = %d";
+        WHERE rating_id = %d
+          AND rating_id <> -1";
 
       $item = $posted_options[$id];
       db_query($sql, $item['rating'], $item['score'], $item['enabled'], $item['weight'], $id);
@@ -384,7 +385,8 @@ function theme_slashcomments_admin_ratings_form($form) {
 
 function slashcomments_update_all_karma() {
   $batch  = array(
-    'operations' => array(array('slashcomments_batch_update_karma', array())),
+    'operations' => array(array('slashcomments_batch_update_karma', array()),
+                          array('slashcomments_batch_update_content_karma',array())),
     'finished' => 'slashcomments_batch_update_karma_finished',
     'title' => t('Updating users karma'),
     'init_message' => t('Karma update is starting.'),

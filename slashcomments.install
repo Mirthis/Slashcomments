@@ -174,6 +174,11 @@ function slashcomments_get_schema() {
         'type' => 'int',
         'not null' => TRUE,
       ),
+      'last_rated' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
       'created' => array(
         'description' => t('TODO: please describe this field!'),
         'type' => 'int',
@@ -200,6 +205,11 @@ function slashcomments_get_schema() {
         'not null' => TRUE,
       ),
       'karma' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'score' => array(
         'description' => t('TODO: please describe this field!'),
         'type' => 'int',
         'not null' => TRUE,
@@ -380,6 +390,38 @@ function slashcomments_update_6101(&$sandbox) {
   return $ret;
 }
 
+
+function slashcomments_update_6102(&$sandbox) {
+  $ret = array();
+  /*db_add_field($ret, 'slashcomments_contents_karma','score',array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'initial' => 0
+      ));*/
+
+  /*db_add_field($ret, 'slashcomments_contents_rating','last_rated',array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => TRUE,
+      ));*/
+
+  $batch  = array(
+      'operations' => array(
+array('slashcomments_batch_init_ratings', array()),
+array('slashcomments_batch_update_content_karma', array()),
+),
+      'title' => t('Update data to version 6.x-1.1'),
+      'init_message' => t('Database upate is starting.'),
+      'progress_message' => t('Processed @current out of @total.'),
+      'error_message' => t('Database update has encountered an error.'),
+      'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
+      );
+
+  batch_set($batch);
+
+  return $ret;
+}
 
 /*
    Batch 'finished' callback
