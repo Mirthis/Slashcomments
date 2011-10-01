@@ -26,7 +26,6 @@ function slashcomments_batch_update_karma(&$context) {
 
   // user to be processed for each call
   $limit = SLASHCOMMENTS_BATCH_SIZE_UPDATE_KARMA;
-
   // With each pass through the callback, retrieve the next group of nids.
   $sql =  "SELECT DISTINCT uid FROM {slashcomments_contents_rating} WHERE uid > %d ORDER BY uid ASC";
   $result = db_query_range($sql, $context['sandbox']['current_user'], 0, $limit);
@@ -144,6 +143,7 @@ function slashcomments_batch_init_ratings(&$context) {
 
   while ($row = db_fetch_array($result)) {
     slashcomments_update_rating($row['cid']);
+
     if(_slashcomments_karma_enabled()) {
       slashcomments_init_contents_karma($row['cid'],$row['uid'], TRUE);
       slashcomments_update_contents_karma($row['cid']);
@@ -152,7 +152,7 @@ function slashcomments_batch_init_ratings(&$context) {
     // Update our progress information.
     $context['sandbox']['progress']++;
     $context['sandbox']['current_cid'] = $row['cid'];
-    $context['message'] = t('Now updating karma value for content %cid (%current of %total)',
+    $context['message'] = t('Now initializing rating for content %cid (%current of %total)',
       array('%cid' => $row['cid'], '%current' => $context['sandbox']['progress'], '%total' => $context['sandbox']['max']));
   }
   // Inform the batch engine that we are not finished,
@@ -176,8 +176,8 @@ function slashcomments_batch_init_ratings_finished($success, $results, $operatio
 
 function slashcomments_batch_update_ratings(&$context) {
   if (!isset($context['sandbox']['progress'])) {
-    $sql = "SELECT count(DISTINCT content_id) FROM {votingapi_vote}
-      WHERE content_type = 'comment' AND tag = 'slashcomments'";
+    $sql = "SELECT count(DISTINCT content_id) FROM {votingapi_vote} v, {comments} c
+      WHERE content_type = 'comment' AND tag = 'slashcomments' AND v.content_id = c.cid";
 
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_item'] = 0;
@@ -188,9 +188,10 @@ function slashcomments_batch_update_ratings(&$context) {
   $limit = SLASHCOMMENTS_BATCH_SIZE_UPDATE_RATINGS;
 
   // With each pass through the callback, retrieve the next group of nids.
-  $sql = "SELECT DISTINCT content_id FROM {votingapi_vote}
+  $sql = "SELECT DISTINCT content_id FROM {votingapi_vote} v, {comments} c
   WHERE content_type = 'comment' AND tag = 'slashcomments'
-  AND content_id > %d ORDER BY content_id";
+  AND content_id > %d AND v.content_id = c.cid ORDER BY content_id
+  ";
 
   $result = db_query_range($sql, $context['sandbox']['current_item'], 0, $limit);
 
@@ -236,14 +237,12 @@ function slashcomments_batch_migrate_old_data(&$context) {
     $context['sandbox']['current_item'] = 0;
     $context['sandbox']['max'] = db_result(db_query($sql));
   }
-
   // user to be processed for each call
   $limit = SLASHCOMMENTS_BATCH_SIZE_MIGRATE_OLD_DATA;
-  sleep(2);
 
   // With each pass through the callback, retrieve the next group of nids.
   $sql = "SELECT cid content_id, karma
-    FROM slashcomments_ratings
+    FROM {slashcomments_ratings}
     WHERE nums_rating = 0 AND cid > %d
     ORDER BY cid ASC";
 
@@ -256,7 +255,7 @@ function slashcomments_batch_migrate_old_data(&$context) {
     $record['created'] = $record['modified'] = time();
 
     drupal_write_record('slashcomments_contents_karma', $record);
-
+    
     // Update our progress information.
     $context['sandbox']['progress']++;
     $context['sandbox']['current_item'] = $row['content_id'];

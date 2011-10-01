@@ -634,6 +634,7 @@ function slashcomments_update_rating($content_id) {
  */
 function slashcomments_init_contents_karma($cid, $author_uid, $use_default=FALSE) {
 
+  db_query("DELETE FROM {slashcomments_contents_karma} WHERE content_id = %d", $cid);
   // If user karma has the default value no modifier is applied
   $karma = ($use_default) ? _slashcomments_get_default_karma() :  slashcomments_get_user_karma($author_uid);
   $modifier = _slashcomments_get_karma_modifier($karma);

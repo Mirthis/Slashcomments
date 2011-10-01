@@ -368,17 +368,18 @@ function slashcomments_update_6101(&$sandbox) {
   db_create_table($ret, 'slashcomments_karma_modifier', $schema['slashcomments_karma_modifier']);
   db_create_table($ret, 'slashcomments_rating_options', $schema['slashcomments_rating_options']);
   db_create_table($ret, 'slashcomments_users_karma', $schema['slashcomments_users_karma']);
-  db_create_table($ret, 'slashcomments_users_mod_points', $schema['slashcomments_users_mod_points']);
+  db_create_table($ret, 'slashcomments_users_mod_points',
+  $schema['slashcomments_users_mod_points']);
 
   slashcomments_init_database();
 
   $batch  = array(
       'operations' => array(
         array('slashcomments_batch_migrate_old_data', array()),
+        array('slashcomments_batch_update_ratings', array()),
         array('slashcomments_batch_update_karma', array()),
-        array('slashcomments_batch_update_ratings', array())
         ),
-      'title' => t('Update data to version 6.x-1.1'),
+      'title' => t('Update data to version 6.x-1.1 - 01'),
       'init_message' => t('Database upate is starting.'),
       'progress_message' => t('Processed @current out of @total.'),
       'error_message' => t('Database update has encountered an error.'),
@@ -386,59 +387,79 @@ function slashcomments_update_6101(&$sandbox) {
       );
 
   batch_set($batch);
-
   return $ret;
 }
 
 
 function slashcomments_update_6102(&$sandbox) {
   $ret = array();
-
+  /*
   $batch  = array(
       'operations' => array(
-array('slashcomments_batch_init_ratings', array()),
-array('slashcomments_batch_update_content_karma', array()),
-),
-      'title' => t('Update data to version 6.x-1.1'),
+        array('slashcomments_batch_init_ratings', array()),
+        array('slashcomments_batch_update_content_karma', array()),
+        ),
+      'title' => t('Update data to version 6.x-1.1 - 02'),
       'init_message' => t('Database upate is starting.'),
       'progress_message' => t('Processed @current out of @total.'),
       'error_message' => t('Database update has encountered an error.'),
       'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
       );
 
-  batch_set($batch);
-
+  $cur_batch = & batch_get();
+  $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
+  if($last_set['title'] = 'Update data to version 6.x-1.1 - 01') {
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
+  }
+  else {
+   batch_set($batch);
+  }
+  */
   return $ret;
 }
 
 function slashcomments_update_6103(&$sandbox) {
   $ret = array();
-  db_add_field($ret, 'slashcomments_contents_karma','score',array(
-        'description' => t('TODO: please describe this field!'),
-        'type' => 'int',
-        'not null' => TRUE,
-        'initial' => 0
-      ));
 
-  db_add_field($ret, 'slashcomments_contents_rating','last_rated',array(
-        'description' => t('TODO: please describe this field!'),
-        'type' => 'int',
-        'not null' => TRUE,
-      ));
+  if(!db_column_exists('slashcomments_contents_karma', 'score')) {
+    db_add_field($ret, 'slashcomments_contents_karma','score',array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          'initial' => 0
+          ));
+  }
+
+  if(!db_column_exists('slashcomments_contents_rating', 'last_rated')) {
+    db_add_field($ret, 'slashcomments_contents_rating','last_rated',array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ));
+  }
 
   $batch  = array(
       'operations' => array(
-array('slashcomments_batch_init_ratings', array()),
-array('slashcomments_batch_update_content_karma', array()),
-),
-      'title' => t('Update data to version 6.x-1.1'),
+        array('slashcomments_batch_init_ratings', array()),
+        array('slashcomments_batch_update_content_karma', array()),
+        ),
+      'title' => t('Update data to version 6.x-1.1 - 03'),
       'init_message' => t('Database upate is starting.'),
       'progress_message' => t('Processed @current out of @total.'),
       'error_message' => t('Database update has encountered an error.'),
       'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
       );
 
-  batch_set($batch);
+  $cur_batch = & batch_get();
+  $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
+  if($last_set['title'] = 'Update data to version 6.x-1.1 - 01') {
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
+  }
+  else {
+   batch_set($batch);
+  }
 
   return $ret;
 }
