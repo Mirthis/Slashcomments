@@ -80,7 +80,6 @@ function slashcomments_admin_general_form() {
 
 
 function slashcomments_admin_karma_form() {
-
   drupal_add_js(drupal_get_path('module', 'slashcomments') .'/scripts/slashcomments-settings.js');
 
   $form['slashcomments_karma'] = array(

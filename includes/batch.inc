@@ -65,7 +65,7 @@ function slashcomments_batch_update_content_karma(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_cid'] = 0;
-    $context['sandbox']['max'] = db_result(db_query('SELECT COUNT(*) FROM {slashcomments_contents_rating}'));
+    $context['sandbox']['max'] = db_result(db_query('SELECT COUNT(*) FROM {slashcomments_contents_rating} WHERE content_id > 0'));
   }
 
   // user to be processed for each call
