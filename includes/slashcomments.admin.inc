@@ -18,6 +18,21 @@ function slashcomments_admin_general_form() {
     '#collapsed' => FALSE,
   );
 
+  $node_types = node_get_types();
+  $options = array();
+  foreach ($node_types as $node_machine_name => $node_type) {
+    $options[$node_machine_name] = $node_type->name;
+  }
+
+  $form['slashcomments_general']['slashcomments_node_types'] = array(
+    '#type' => 'select',
+    '#title' => t('Node types where slashcomments should be used'),
+    '#options' => $options,
+    '#multiple' => TRUE,
+    '#description' => t('Choose which node types will have slashcomments applied.'),
+    '#default_value' => variable_get('slashcomments_node_types', array()),
+  );
+
   $form['slashcomments_general']['slashcomments_default_score'] = array(
     '#type' => 'textfield',
     '#title' => t('Initial score for new comments from registered users'),

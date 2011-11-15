@@ -437,6 +437,15 @@ function slashcomments_moderation_form_submit($form, &$form_state) {
 function slashcomments_store_vote($cid, $vote) {
   global $user;
 
+  // load the parent node of the comment
+  $nid = db_result(db_query("SELECT nid FROM {comments} WHERE cid = %d", $cid));
+  if (!$nid) return;
+
+  $node = node_load($nid);
+  if(!slashcomments_node_has_slashcomments($node)) {
+    return;
+  }
+
   $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
 
   $result = slashcomments_user_can_moderate($user->uid, $cid);
@@ -907,6 +916,11 @@ function slashcomments_get_user_display_karma($uid) {
  * controls displayed, if enabled, above and below comments.
  */
 function slashcomments_form_alter(&$form, $form_state, $form_id) {
+
+  if(!slashcomments_node_has_slashcomments($form['#node_type'])) {
+    return;
+  }
+
   if ($form_id == 'comment_form') {
     unset($form['comment_filter']['comment']['#title']);
   }
@@ -1065,6 +1079,11 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
  * depending on the threshold.
  */
 function slashcomments_preprocess_comment(&$variables) {
+
+  if(!slashcomments_node_has_slashcomments($variables['node'])) {
+    return;
+  }
+
   global $user, $_slashcomments_ignore_threshold;
 
   $comment = $variables['comment'];
@@ -1189,6 +1208,11 @@ function slashcomments_comment($comment, $op) {
  * Implementation of hook_preprocess_author_pane().
  */
 function slashcomments_preprocess_author_pane(&$variables) {
+  $node = node_load($variables['context']->nid);
+  if(!slashcomments_node_has_slashcomments($node)) {
+    return;
+  }
+
   _slashcomments_set_author_pane_template($variables);
 
   // Add karma to template variables
@@ -1922,17 +1946,8 @@ function slashcomments_get_time_str($timestamp) {
   return $output;
 }
 
-/*
-function slashcomments_upodate_all_ratings() {
-  $sql = "SELECT DISTINCT cid
-    FROM {votingapi_vote} v
-    WHERE v.content_type = 'comment' AND v.tag = 'slashcomments'
-    AND v.value = o.rating_id AND v.content_id = %d";
-
-  $result = db_query($sql);
-
-  while ($cid = db_fetch_array($result)) {
-    slashcomments_update_rating($cid);
-  }
-}*/
-
+function slashcomments_node_has_slashcomments($node) {
+  // Get the list of types that should use slashcomments
+  $node_types = variable_get('slashcomments_node_types', array());
+  return in_array($node->type, $node_types);
+}

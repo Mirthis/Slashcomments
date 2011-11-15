@@ -291,6 +291,7 @@ function slashcomments_uninstall() {
   variable_del('slashcomments_limit_takepart');
   variable_del('slashcomments_mod_per_day');
   variable_del('slashcomments_ratings_for_karma');
+  variable_del('slashcomments_node_types');
 
   $result = db_query("SELECT name FROM {variable} WHERE name LIKE '%s'", 'comment_default_threshold_%');
 
