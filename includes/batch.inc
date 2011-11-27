@@ -7,15 +7,17 @@
  */
 
 // numbers of user processed by the update karma batch
-define('SLASHCOMMENTS_BATCH_SIZE_UPDATE_KARMA', 10000);
+define('SLASHCOMMENTS_BATCH_SIZE_UPDATE_KARMA', 5000);
 // numbers of user processed by the update rating batch
-define('SLASHCOMMENTS_BATCH_SIZE_UPDATE_RATINGS', 10000);
+define('SLASHCOMMENTS_BATCH_SIZE_UPDATE_RATINGS', 5000);
 // numbers of user processed by the update rating batch
-define('SLASHCOMMENTS_BATCH_SIZE_MIGRATE_OLD_DATA', 10000);
+define('SLASHCOMMENTS_BATCH_SIZE_MIGRATE_OLD_DATA', 5000);
 // numbers of user processed by the update rating batch
-define('SLASHCOMMENTS_BATCH_SIZE_CONTENT_KARMA', 10000);
+define('SLASHCOMMENTS_BATCH_SIZE_CONTENT_KARMA', 5000);
 // numbers of user processed by the init ratings batch
-define('SLASHCOMMENTS_BATCH_SIZE_INIT_RATINGS', 10000);
+define('SLASHCOMMENTS_BATCH_SIZE_INIT_RATINGS', 5000);
+// numbers of user processed by the update stats batch
+define('SLASHCOMMENTS_BATCH_SIZE_UPDATE_USERS_STATS', 5000);
 
 function slashcomments_batch_update_karma(&$context) {
   if (!isset($context['sandbox']['progress'])) {
@@ -279,6 +281,51 @@ function slashcomments_batch_migrate_old_data(&$context) {
 function slashcomments_batch_migrate_old_data_finished($success, $results, $operations) {
   if ($success) {
     $message = t("Rating for all comments has been updated");
+  }
+  else {
+    $error_operation = reset($operations);
+    $message = t('An error occurred while processing %error_operation with arguments: @arguments',
+      array('%error_operation' => $error_operation[0], '@arguments' => print_r($error_operation[1], TRUE)));
+  }
+  drupal_set_message($message);
+}
+
+function slashcomments_batch_update_users_stats(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_user'] = 0;
+    $context['sandbox']['max'] = db_result(db_query('SELECT COUNT(DISTINCT uid) FROM {comments} WHERE uid <> 0'));
+  }
+
+  // user to be processed for each call
+  $limit = SLASHCOMMENTS_BATCH_SIZE_UPDATE_USERS_STATS;
+
+  // With each pass through the callback, retrieve the next group of nids.
+  $sql =  "SELECT DISTINCT uid FROM {comments} WHERE uid > %d ORDER BY uid ASC";
+  $result = db_query_range($sql, $context['sandbox']['current_user'], 0, $limit);
+
+  while ($row = db_fetch_array($result)) {
+    slashcomments_update_user_stats($row['uid']);
+
+    // Update our progress information.
+    $context['sandbox']['progress']++;
+    $context['sandbox']['current_user'] = $row['uid'];
+    $context['message'] = t('Now updating stats for user %uid (%current of %total)',
+        array('%uid' => $row['uid'], '%current' => $context['sandbox']['progress'], '%total' => $context['sandbox']['max']));
+  }
+  // Inform the batch engine that we are not finished,
+  // and provide an estimation of the completion level we reached.
+  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+}
+
+/*
+  Batch 'finished' callback
+ */
+function slashcomments_batch_update_users_stats_finished($success, $results, $operations) {
+  if ($success) {
+    $message = t("Stats for all users has been updated");
   }
   else {
     $error_operation = reset($operations);

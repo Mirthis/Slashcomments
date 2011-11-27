@@ -230,16 +230,33 @@ function slashcomments_views_data() {
     ),
   );
 
-  $data['slashcomments_users_karma']['total'] = array(
-    'title' => t('Rated comments'),
-    'help' => t('Total number of comments that contributed to karma'),
+  $data['slashcomments_users_stats']['table']['group'] = t('Slashcomments');
+
+  $data['slashcomments_users_stats']['table']['join']['comments'] = array(
+    'left_field' => 'uid',
+    'field' => 'uid'
+  );
+
+  $data['slashcomments_users_stats']['table']['join']['node'] = array(
+    'left_field' => 'uid',
+    'field' => 'uid'
+  );
+
+  $data['slashcomments_users_stats']['table']['join']['users'] = array(
+    'left_field' => 'uid',
+    'field' => 'uid'
+  );
+
+  $data['slashcomments_users_stats']['posted'] = array(
+    'title' => t('Posted comments'),
+    'help' => t('Total number of comments posted by the user'),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_numeric',
-      'name field' => t('Total comments for karma'),
+      'name field' => t('Number of posted comments'),
       'numeric' => TRUE,
     ),
     'filter' => array(
@@ -250,16 +267,16 @@ function slashcomments_views_data() {
     ),
   );
 
-  $data['slashcomments_users_karma']['positive'] = array(
+  $data['slashcomments_users_stats']['positive'] = array(
     'title' => t('Positive rated comments'),
-    'help' => t('Positive comments that contributed to karma'),
+    'help' => t('Positive rated comments'),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_numeric',
-      'name field' => t('Positive comments for karma'),
+      'name field' => t('Positive rated comments'),
       'numeric' => TRUE,
     ),
     'filter' => array(
@@ -270,16 +287,16 @@ function slashcomments_views_data() {
     ),
   );
 
-  $data['slashcomments_users_karma']['negative'] = array(
+  $data['slashcomments_users_stats']['negative'] = array(
     'title' => t('Negative rated comments'),
-    'help' => t('Negative of comments that contributed to karma'),
+    'help' => t('Negative rated cooments'),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_numeric',
-      'name field' => t('Negative comments for karma'),
+      'name field' => t('Negative rated comments'),
       'numeric' => TRUE,
     ),
     'filter' => array(
@@ -290,16 +307,96 @@ function slashcomments_views_data() {
     ),
   );
 
-  $data['slashcomments_users_karma']['neutral'] = array(
+  $data['slashcomments_users_stats']['neutral'] = array(
     'title' => t('Neutral rated comments'),
-    'help' => t('Neutral comments that contributed to karma'),
+    'help' => t('Neutral rated comments'),
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE
     ),
     'argument' => array(
       'handler' => 'views_handler_argument_numeric',
-      'name field' => t('Neutral comments for karma'),
+      'name field' => t('Neutral rated comments'),
+      'numeric' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['slashcomments_users_stats']['moderated'] = array(
+    'title' => t('Moderated comments'),
+    'help' => t('Total number of comments moderated by the user'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+      'name field' => t('Number of comments moderated by the user'),
+      'numeric' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['slashcomments_users_stats']['moderated_positive'] = array(
+    'title' => t('Positive moderated omments'),
+    'help' => t('comment positevely moderated by the user'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+      'name field' => t('Positive moderated comments'),
+      'numeric' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['slashcomments_users_stats']['moderated_negative'] = array(
+    'title' => t('Negative moderated comments'),
+    'help' => t('Comments negatively moderated by the user'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+      'name field' => t('Negative moderated comments'),
+      'numeric' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['slashcomments_users_stats']['moderated_neutral'] = array(
+    'title' => t('Neutral moderate comments'),
+    'help' => t('Comments neutrally moderated by the user'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+      'name field' => t('Neutral moderated comments'),
       'numeric' => TRUE,
     ),
     'filter' => array(

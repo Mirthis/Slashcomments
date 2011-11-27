@@ -28,26 +28,6 @@ function slashcomments_get_schema() {
           'type' => 'int',
           'not null' => TRUE,
         ),
-        'total' => array(
-          'description' => t('TODO: please describe this field!'),
-          'type' => 'int',
-          'not null' => FALSE,
-        ),
-        'positive' => array(
-          'description' => t('TODO: please describe this field!'),
-          'type' => 'int',
-          'not null' => TRUE,
-        ),
-        'negative' => array(
-          'description' => t('TODO: please describe this field!'),
-          'type' => 'int',
-          'not null' => TRUE,
-        ),
-        'neutral' => array(
-          'description' => t('TODO: please describe this field!'),
-          'type' => 'int',
-          'not null' => TRUE,
-        ),
         'created' => array(
           'description' => t('TODO: please describe this field!'),
           'type' => 'int',
@@ -260,6 +240,68 @@ function slashcomments_get_schema() {
     'primary key' => array('uid'),
   );
 
+  $schema['slashcomments_users_stats'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'uid' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'posted' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => FALSE,
+        ),
+        'positive' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'negative' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'neutral' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'moderated' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'moderated_positive' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'moderated_negative' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'moderated_neutral' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'created' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+        'modified' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+        ),
+      ),
+      'primary key' => array('uid'),
+    );
+
   return $schema;
 }
 
@@ -454,7 +496,7 @@ function slashcomments_update_6103(&$sandbox) {
 
   $cur_batch = & batch_get();
   $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
-  if($last_set['title'] = 'Update data to version 6.x-1.1 - 01') {
+  if($last_set['title'] == 'Update data to version 6.x-1.1 - 01') {
     $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
     $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
   }
@@ -464,6 +506,43 @@ function slashcomments_update_6103(&$sandbox) {
 
   return $ret;
 }
+
+function slashcomments_update_6104(&$sandbox) {
+  global $base_url;
+
+  $schema = slashcomments_get_schema();
+  $ret = array();
+
+  db_create_table($ret, 'slashcomments_users_stats', $schema['slashcomments_users_stats']);
+  db_drop_field($ret, 'slashcomments_users_karma', 'total');
+  db_drop_field($ret, 'slashcomments_users_karma', 'positive');
+  db_drop_field($ret, 'slashcomments_users_karma', 'negative');
+  db_drop_field($ret, 'slashcomments_users_karma', 'neutral');
+
+  $batch  = array(
+      'operations' => array(
+        array('slashcomments_batch_update_users_stats', array()),
+        ),
+      'title' => t('Update data to version 6.x-1.1 - 04'),
+      'init_message' => t('Database upate is starting.'),
+      'progress_message' => t('Processed @current out of @total.'),
+      'error_message' => t('Database update has encountered an error.'),
+      'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
+      );
+
+  $cur_batch = & batch_get();
+  $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
+  if($last_set['title'] == 'Update data to version 6.x-1.1 - 03') {
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
+    $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
+  }
+  else {
+   batch_set($batch);
+  }
+
+  return $ret;
+}
+
 
 /*
    Batch 'finished' callback

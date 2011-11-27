@@ -136,6 +136,7 @@ function slashcomments_enable() {
   $batch  = array(
     'operations' => array(
       array('slashcomments_batch_init_ratings', array()),
+      array('slashcomments_batch_update_users_stats', array()),
   ),
   'finished' => 'slashcomments_batch_init_ratings_finished',
   'title' => t('Update or initialize slashcomments data structure.'),
@@ -481,6 +482,8 @@ function slashcomments_store_vote($cid, $vote) {
     slashcomments_update_karma($author_uid);
     slashcomments_update_contents_karma($cid);
   }
+  slashcomments_update_user_stats($author_uid);
+  slashcomments_update_user_stats($user->uid);
 
   $result['message'] = t('Comment moderated!') . ' ';
   $result['message'] .= _slashcomments_get_moderation_message(1, $user->uid);
@@ -797,6 +800,64 @@ function slashcomments_calculate_rating($cid) {
 }
 
 /**
+ * Updates stats of a given user.
+ *
+ * @param $uid
+ *   User identifier
+ */
+function slashcomments_update_user_stats($uid) {
+  //if ($uid == 0) {
+    //return;
+  //}
+
+  $sql = "SELECT count(*) FROM {slashcomments_users_stats} WHERE uid = %d";
+  $has_stats = db_result(db_query($sql, $uid));
+
+  // Query to extract stats on posted comments
+  $sql =  "SELECT count(*) posted,
+      SUM(CASE WHEN num_ratings <> 0 AND score < 1 THEN 1 ELSE 0 END) negative,
+      SUM(CASE WHEN num_ratings <> 0 AND score > 1 THEN 1 ELSE 0 END) positive,
+      SUM(CASE WHEN r.content_id is null OR num_ratings = 0 OR score = 1 THEN 1 ELSE 0 END) neutral
+      FROM {comments} c LEFT JOIN {slashcomments_contents_rating} r
+      ON c.cid = r.content_id
+      WHERE c.uid = %d";
+
+  // Extract the data
+  $result = db_query($sql, $uid);
+  $posted = db_fetch_array($result);
+
+  // Query to extract stats on moderated comments
+  $sql = "SELECT count(*) moderated,
+      SUM(CASE WHEN score < 0 THEN 1 ELSE 0 END) moderated_negative,
+      SUM(CASE WHEN score > 0 THEN 1 ELSE 0 END) moderated_positive,
+      SUM(CASE WHEN score = 0 THEN 1 ELSE 0 END) moderated_neutral
+    FROM {votingapi_vote} v, {slashcomments_rating_options} o
+    WHERE v.value = o.rating_id
+    AND content_type = 'comment' AND tag = 'slashcomments'
+    AND value_type = 'option' AND uid = %d";
+
+  // Extract the data
+  $result = db_query($sql, $uid);
+  $moderated = db_fetch_array($result);
+  $record = (object)array_merge($posted, $moderated);
+
+  // add missing fields
+  $record->uid = $uid;
+  $record->modified = time();
+
+  if ($has_stats) {
+    $update = 'uid';
+  }
+  else {
+    $update = NULL;
+    $record->created = $record->modified;
+  }
+
+  // Store the stats in the db
+  drupal_write_record('slashcomments_users_stats', $record, $update);
+}
+
+/**
  * Updates karma of a given user.
  *
  * @param $uid
@@ -808,7 +869,8 @@ function slashcomments_update_karma($uid) {
   }
 
   // min and max rating considering when karma is calculated
-  $comments_num = db_result(db_query("SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d AND num_ratings <> 0", $uid));
+  $sql = "SELECT count(*) FROM {slashcomments_contents_rating} WHERE uid = %d AND num_ratings <> 0";
+  $comments_num = db_result(db_query($sql, $uid));
   $comments_for_karma = _slashcomments_get_ratings_for_karma();
   $lowest_for_karma = _slashcomments_get_lowest_score_for_karma();
   $highest_for_karma = _slashcomments_get_highest_score_for_karma();
@@ -825,21 +887,19 @@ function slashcomments_update_karma($uid) {
   // Query to extract karma
   $sql =  "SELECT AVG(CASE WHEN score <  %d THEN %d
     WHEN score > %d THEN %d
-    ELSE score END ) karma,
-      SUM(CASE WHEN score < 1 THEN 1 ELSE 0 END) negative,
-      SUM(CASE WHEN score > 1 THEN 1 ELSE 0 END) positive
+    ELSE score END ) karma
       FROM {slashcomments_contents_rating} r
       WHERE r.uid = %d
       AND r.num_ratings <> 0
       HAVING count(*) >= %d";
 
   // Extract the data and fill missing fields
-  $result = db_query($sql, $lowest_for_karma, $lowest_for_karma, $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
+  $result = db_query($sql, $lowest_for_karma, $lowest_for_karma,
+            $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
   $record = db_fetch_object($result);
   $record->uid = $uid;
-  $record->total = $comments_num;
-  $record->neutral = $record->total - $record->positive - $record->negative;
   $record->modified = time();
+
   if ($has_karma) {
     $update = 'uid';
   }
@@ -921,7 +981,12 @@ function slashcomments_get_user_display_karma($uid) {
  */
 function slashcomments_form_alter(&$form, $form_state, $form_id) {
 
-  if(!slashcomments_node_has_slashcomments($form['#node_type'])) {
+  $node = $form['#node_type'];
+  if(!$node) {
+    $node = node_load(arg(1));
+  }
+
+  if(!slashcomments_node_has_slashcomments($node)) {
     return;
   }
 
@@ -932,6 +997,7 @@ function slashcomments_form_alter(&$form, $form_state, $form_id) {
   // Add threshold option and override display mode option in the content type 
   // settings page.
   if ($form_id == 'node_type_form' && isset($form['identity']['type'])) {
+
     $form['comment']['comment_default_threshold'] = array(
       '#type' => 'select',
       '#title' => t('Default comments threshold'),
@@ -1072,6 +1138,9 @@ function slashcomments_user($op, &$edit, &$account, $category = 'account') {
       '#weight' => 1,
     );
     break;
+  case 'delete':
+    delete_slashcomments_user_data($account->uid);
+    break;
   }
 }
 
@@ -1198,11 +1267,12 @@ function slashcomments_comment($comment, $op) {
     if (_slashcomments_karma_enabled()) {
       slashcomments_init_contents_karma($comment['cid'], $comment['uid']);
     }
-
+    slashcomments_update_user_stats($comment['uid']);
     break;
   case 'delete':
     // Delete slashcomments data stored for the comment
     slashcomments_delete_rating($comment->cid);
+    slashcomments_update_user_stats($comment->cid);
     break;
   }
 }
@@ -1954,4 +2024,17 @@ function slashcomments_node_has_slashcomments($node) {
   // Get the list of types that should use slashcomments
   $node_types = variable_get('slashcomments_node_types', array());
   return in_array($node->type, $node_types);
+}
+
+
+/*
+ * Delete slashcomments data related to the specificied user.
+ *
+ * @param $uid
+ *  User id of the affected user
+ */
+function delete_slashcomments_user_data($uid) {
+  db_query("DELETE FROM {slashcomments_users_karma} WHERE uid = %d", $uid);
+  db_query("DELETE FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid);
+  db_query("DELETE FROM {slashcomments_users_stats} WHERE uid = %d", $uid);
 }

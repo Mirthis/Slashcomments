@@ -537,7 +537,7 @@ function slashcomments_views_default_views() {
   ));
   $views[$view->name] = $view;
 
-   /*
+  /*
    * View 'slashcomments_users_stats'
    */
   $view = new view;
@@ -876,6 +876,15 @@ function slashcomments_views_default_views() {
       'relationship' => 'none',
     ),
   ));
+  $handler->override_option('sorts', array(
+    'karma' => array(
+      'order' => 'DESC',
+      'id' => 'karma',
+      'table' => 'slashcomments_users_karma',
+      'field' => 'karma',
+      'relationship' => 'none',
+    ),
+  ));
   $handler->override_option('filters', array(
     'karma' => array(
       'operator' => '=',
@@ -940,85 +949,85 @@ function slashcomments_views_default_views() {
       text-align:center;
 }
 </style>');
-  $handler->override_option('footer_format', '2');
-  $handler->override_option('footer_empty', 0);
-  $handler->override_option('use_ajax', TRUE);
-  $handler->override_option('items_per_page', 50);
-  $handler->override_option('use_pager', 'mini');
-  $handler->override_option('style_plugin', 'table');
-  $handler->override_option('style_options', array(
-    'grouping' => '',
-    'override' => 1,
-    'sticky' => 1,
-    'order' => 'desc',
-    'columns' => array(
-      'picture' => 'picture',
-      'name' => 'name',
-      'karma' => 'karma',
-      'posted' => 'posted',
-      'positive' => 'positive',
-      'negative' => 'negative',
-      'moderated' => 'moderated',
-      'moderated_positive' => 'moderated_positive',
-      'moderated_negative' => 'moderated_negative',
+$handler->override_option('footer_format', '2');
+$handler->override_option('footer_empty', 0);
+$handler->override_option('use_ajax', TRUE);
+$handler->override_option('items_per_page', 50);
+$handler->override_option('use_pager', 'mini');
+$handler->override_option('style_plugin', 'table');
+$handler->override_option('style_options', array(
+  'grouping' => '',
+  'override' => 1,
+  'sticky' => 1,
+  'order' => 'asc',
+  'columns' => array(
+    'picture' => 'picture',
+    'name' => 'name',
+    'karma' => 'karma',
+    'posted' => 'posted',
+    'positive' => 'positive',
+    'negative' => 'negative',
+    'moderated' => 'moderated',
+    'moderated_positive' => 'moderated_positive',
+    'moderated_negative' => 'moderated_negative',
+  ),
+  'info' => array(
+    'picture' => array(
+      'sortable' => 0,
+      'separator' => '',
     ),
-    'info' => array(
-      'picture' => array(
-        'sortable' => 0,
-        'separator' => '',
-      ),
-      'name' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'karma' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'posted' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'positive' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'negative' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'moderated' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'moderated_positive' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
-      'moderated_negative' => array(
-        'sortable' => 1,
-        'separator' => '',
-      ),
+    'name' => array(
+      'sortable' => 1,
+      'separator' => '',
     ),
-    'default' => 'karma',
-  ));
-  $handler = $view->new_display('page', 'Page', 'page_1');
-  $handler->override_option('path', 'admin/reports/slashcomments/user_stats');
-  $handler->override_option('menu', array(
-    'type' => 'normal',
-    'title' => 'Slashcomments users stats',
-    'description' => '',
-    'weight' => '0',
-    'name' => 'navigation',
-  ));
-  $handler->override_option('tab_options', array(
-    'type' => 'none',
-    'title' => '',
-    'description' => '',
-    'weight' => 0,
-    'name' => 'navigation',
-  ));
-  $views[$view->name] = $view;
+    'karma' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'posted' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'positive' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'negative' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'moderated' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'moderated_positive' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+    'moderated_negative' => array(
+      'sortable' => 1,
+      'separator' => '',
+    ),
+  ),
+  'default' => '-1',
+));
+$handler = $view->new_display('page', 'Page', 'page_1');
+$handler->override_option('path', 'admin/reports/slashcomments/user_stats');
+$handler->override_option('menu', array(
+  'type' => 'normal',
+  'title' => 'Slashcomments users stats',
+  'description' => '',
+  'weight' => '0',
+  'name' => 'navigation',
+));
+$handler->override_option('tab_options', array(
+  'type' => 'none',
+  'title' => '',
+  'description' => '',
+  'weight' => 0,
+  'name' => 'navigation',
+));
+$views[$view->name] = $view;
 
-  return $views;
+return $views;
 }
