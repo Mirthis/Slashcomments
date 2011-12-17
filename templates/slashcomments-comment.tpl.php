@@ -53,7 +53,7 @@
     <div class="comment-content">
      <?php print $content ?>
         <?php print $slashcomments_form ?>
-        <?php // print $slashcomments_Status ?>
+        <?php print $slashcomments_comment_moderation_status ?>
       <div class="clear clear-block"></div>
       <div class="meta">
         <div class="links"><?php print $links; ?></div>

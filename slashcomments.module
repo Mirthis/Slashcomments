@@ -43,6 +43,18 @@ define('SLASHCOMMENTS_LOWEST_SCORE_FOR_KARMA', -6);
 // Higher score valid for karma
 define('SLASHCOMMENTS_HIGHEST_SCORE_FOR_KARMA', 8);
 
+// user can moderate status
+define('USER_CAN_MODERATE',     1);
+define('NO_MOD_PERMISSION',     2);
+define('IS_NEWBIE',             4);
+define('LOW_KARMA',             8);
+define('NO_MOD_POINTS',         16);
+define('USER_IS_NODE_AUTHOR',   32);
+define('ALREADY_MODERATED',     64);
+define('TOOK_PART',             128);
+define('OWN_COMMENT',           256);
+
+
 /**
  * Implementation of hook_views_api().
  */
@@ -167,7 +179,7 @@ function slashcomments_theme() {
 
   // Theme the moderation form wrapper
   $items['slashcomments_form_wrapper'] = array(
-    'arguments' => array('cid' => NULL, 'uid' => NULL, 'message' => NULL),
+    'arguments' => array('cid' => NULL, 'uid' => NULL, 'show_form' => TRUE, 'message' => NULL),
   );
 
   // Theme the form in the Ratings settings page
@@ -180,8 +192,13 @@ function slashcomments_theme() {
     'arguments' => array('rating' => NULL),
   );
 
-  // Theme modration result
-  $items['slashcomments_moderation_status'] = array(
+  // Theme moderation result
+  $items['slashcomments_post_moderation_status'] = array(
+    'arguments' => array('status_result' => NULL),
+  );
+
+  // Theme moderation message shows for every message
+  $items['slashcomments_comment_moderation_status'] = array(
     'arguments' => array('status_result' => NULL),
   );
 
@@ -213,94 +230,72 @@ function slashcomments_moderate_access() {
 
 
 /**
- * Determines if a given user can vote on a given comment
+ * Determines if a given user can moderate comments.
  *
  * According to user's role permission, karma, and other slashcomments settings 
- * determine if a user should be allowed to moderate a specific comment
+ * determine if a user should be allowed to moderate comments.
  *
  * @param $uid
  *  User id of the user who's going to be checked
  *
- * @parma $cid
- *  Comment id of the comment the user need to moderate
- *
  * @return
- *  An associative array with two keys:
- *  - result: 1 if user can moderate, 0 if user can't moderate
- *  - message: when result is 0 the reason why the user can't moderate
+ *  Binary number representing the result of the check
  */
-function slashcomments_user_can_moderate($uid, $cid) {
-  /* skip controls for the super user */
-  if (user_access('administer slashcomments') && $uid == 1) {
-    return array('result' => 1, 'message' => '');
+
+
+function slashcomments_user_can_moderate($uid) {
+
+  static $result = 0;
+
+  // keeps the status to avoid executing them multiple times during comment 
+  // rendering
+  if($result != 0) {
+    return $result;
   }
 
+  /* skip controls for the super user or user with specific permissions*/
   $bypass = user_access('bypass moderation restriction');
 
-  // keeps the status for checks which are comment independent
-  // to avoid executing them multiple times during comment rendering
-  static $result = array('result' => 0, 'message' => '', 'step' => 0);
-
-  // comment indipendent checks has given a negative result, exit
-  if ($result['step'] == 1) {
-    return $result;
-  }
-  if ($result['step'] != 2) { // comment's indipendent checks need to be performed
-    $can_vote = 0;
-    global $user;
-
-    // check user has the needed permissiCon
-    if (!user_access('moderate comments')) {
-      $result['message'] = _slashcomments_get_moderation_message(-1, $uid);
-      return $result;
-    }
-
-    // check if user is still a new bie
-    if (!$bypass && strtotime("-" . _slashcomments_get_limit_newbie() . " day") < $user->created) {
-      $result['message'] = _slashcomments_get_moderation_message(-5, $uid);
-      return $result;
-    }
-
-    // check if user has the needed karma
-    if (!$bypass && _slashcomments_karma_enabled()
-      && slashcomments_get_user_karma($uid) < _slashcomments_get_limit_karma()) {
-        $result['message'] = _slashcomments_get_moderation_message(-2, $uid);
-        return $result;
-      }
-
-    // check if the user has enough moderation points
-    if (!$bypass && _slashcomments_get_mod_per_day() != SLASHCOMMENTS_INFINITE_MOD_POINTS 
-                 && !_slashcomments_user_has_mod_points($uid)) {
-      $result['message'] = _slashcomments_get_moderation_message(-3, $uid);
-      return $result;
-    }
-
-    // check if the moderator is the author of the node  */
-    $node_author = db_result(db_query("SELECT n.uid FROM {comments} c, {node} n WHERE c.cid=%d AND c.nid = n.nid", $cid));
-
-    if ($node_author == $uid) {
-      $result['message'] = _slashcomments_get_moderation_message(-4, $uid);
-      return $result;
-    }
-  }
-
-  $result = array('step' => 2);
-  // check if the user has already moderated this comment
-  if (votingapi_select_votes(array('content_type' => 'comment', 'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'))) {
-    $result['message'] = _slashcomments_get_moderation_message(-6, $uid);
+  if (user_access('administer slashcomments') && $uid == 1 && $bypass) {
+    $result |= USER_CAN_MODERATE;
     return $result;
   }
 
-  // check if user is participating in the discussion
-  return slashcomments_user_participating_in_discussion($uid, $cid, $bypass);
+  global $user;
+
+  // check user has the needed permissiCon
+  if (!user_access('moderate comments')) {
+    $result |= NO_MOD_PERMISSION;
+  }
+
+  // check if user is still a new bie
+  if (strtotime("-" . _slashcomments_get_limit_newbie() . " day") < $user->created) {
+    $result |= IS_NEWBIE;
+  }
+
+  // check if user has the needed karma
+  if (_slashcomments_karma_enabled()
+    && slashcomments_get_user_karma($uid) < _slashcomments_get_limit_karma()) {
+      $result |= LOW_KARMA;
+    }
+
+  // check if the user has enough moderation points
+  if (!_slashcomments_user_has_mod_points($uid)) {
+    $result |= NO_MOD_POINTS;
+  }
+
+  // If all steps are passed user can moderate
+  if($result == '0') {
+    $result |= USER_CAN_MODERATE;
+  }
+  return $result;
 }
 
-
 /**
- * Checks if user has taken part in the discussion
+ * Determines if a given user can moderate a specific comment.
  *
- * Checks if the user is the author of the comment or if it has already 
- * commented the node
+ * According to user's status deternines 
+ * ifa user should be allowed to moderate a specific comment.
  *
  * @param $uid
  *  User id of the user who's going to be checked
@@ -309,20 +304,29 @@ function slashcomments_user_can_moderate($uid, $cid) {
  *  Comment id of the comment the user need to moderate
  *
  * @return
- *  An associative array with two keys:
- *  - result: 1 if user can moderate, 0 if user can't moderate
- *  - message: when result is 0 the reason why the user can't moderate
+ *  Binary number representing the result of the check
  */
-function slashcomments_user_participating_in_discussion($uid, $cid, $bypass = FALSE) {
-  // keeps this variable to avoid executing unecessary checks during
-  // multiple comments rendering
-  static $participating = -1;
+function slashcomments_user_can_moderate_comment($uid, $cid) {
 
-  // result has already been estabilished in  a previous execution.
-  if ($result) {
-    return $result;
-  }
+    $result = slashcomments_user_can_moderate($uid);
 
+    if($result != USER_CAN_MODERATE || 
+      user_access('administer slashcomments') || $uid == 1) {
+      return $result;
+    }
+
+    $bypass = user_access('bypass moderation restriction');
+
+    $node_author = db_result(db_query("SELECT n.uid FROM {comments} c, {node} n WHERE c.cid=%d AND c.nid = n.nid", $cid));
+    if ($node_author == $uid) {
+      $result |= USER_IS_NODE_AUTHOR;
+    }
+
+    if ($vote = votingapi_select_votes(array('content_type' => 'comment', 
+                'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'))) {
+      $result |= ALREADY_MODERATED;
+    }
+    
   // When the option is set check if the user has already commented the node
   if (!$bypass && _slashcomments_get_limit_takepart()) {
     $sql = "SELECT count(*) cnt FROM {comments} c WHERE uid = %d AND nid
@@ -330,22 +334,19 @@ function slashcomments_user_participating_in_discussion($uid, $cid, $bypass = FA
 
     // get user's comments with nid
     $user_cid = db_result(db_query($sql, $uid, $cid));
-    if ($user_cid == 0) {
-      $result = array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
+    if ($user_cid != 0) {
+      $result |= TOOK_PART;
     }
-    else {
-      $result = array('result' => 0, 'message' => _slashcomments_get_moderation_message(-7, $uid));
-    }
-    return $result;
   }
   else {
     // get nid of the discussion
     $nid = db_result(db_query("SELECT count(*) FROM {comments} WHERE cid=%d AND uid=%d", $cid, $uid));
-    if ($nid == 0) {
-      return array('result' => 1, 'message' => _slashcomments_get_moderation_message(1, $uid));
+    if ($nid != 0) {
+      $result |= OWN_COMMENT;
     }
-    return array('result' => 0, 'message' => _slashcomments_get_moderation_message(-8, $uid));
   }
+
+  return $result;
 }
 
 /**
@@ -404,7 +405,7 @@ function slashcomments_moderate() {
   if (!$result['result']) {
     drupal_json(array(
       'status' => 'OK',
-      'message' => theme('slashcomments_moderation_status', $result),
+      'message' => theme('slashcomments_post_moderation_status', $result),
       'hide_forms' => !_slashcomments_user_has_mod_points($user->uid),
     ));
     exit();
@@ -417,13 +418,17 @@ function slashcomments_moderate() {
   $rating_str = theme('slashcomments_rating', $rating);
 
   // Create the string for the message to display after moderation
-  $message_str = theme('slashcomments_moderation_status', $result);
+  $message_str = theme('slashcomments_post_moderation_status', $result);
+
+  // Status update for other forms on the same page
+  $other_forms = theme('slashcomments_comment_moderation_status', $result['message']);
 
   // Set variable for the JS handler
   drupal_json(array(
     'status' => 'OK',
     'rating' => $rating_str,
     'message' => $message_str,
+    'other_form_status' => $other_forms,
     'hide_forms' => !_slashcomments_user_has_mod_points($user->uid)
   ));
   exit();
@@ -442,6 +447,8 @@ function slashcomments_moderation_form_submit($form, &$form_state) {
 function slashcomments_store_vote($cid, $vote) {
   global $user;
 
+  $result = array();
+
   // load the parent node of the comment
   $nid = db_result(db_query("SELECT nid FROM {comments} WHERE cid = %d", $cid));
   if (!$nid) return;
@@ -453,10 +460,10 @@ function slashcomments_store_vote($cid, $vote) {
 
   $author_uid = db_result(db_query("SELECT uid FROM {comments} WHERE cid=%d", $cid));
 
-  $result = slashcomments_user_can_moderate($user->uid, $cid);
+  $result['result'] = slashcomments_user_can_moderate_comment($user->uid, $cid);
 
   // Check if user is allowed to vote
-  if ($result['result'] == 0) {
+  if ($result['result'] != USER_CAN_MODERATE) {
     return $result;
   }
 
@@ -485,8 +492,8 @@ function slashcomments_store_vote($cid, $vote) {
   slashcomments_update_user_stats($author_uid);
   slashcomments_update_user_stats($user->uid);
 
-  $result['message'] = t('Comment moderated!') . ' ';
-  $result['message'] .= _slashcomments_get_moderation_message(1, $user->uid);
+  //$result['message'] = "Comment moderated!" . ' ';
+  $result['message'] = _slashcomments_can_moderate_msg(USER_CAN_MODERATE, array('uid' => $user->uid));
   return $result;
 }
 
@@ -807,7 +814,7 @@ function slashcomments_calculate_rating($cid) {
  */
 function slashcomments_update_user_stats($uid) {
   //if ($uid == 0) {
-    //return;
+  //return;
   //}
 
   $sql = "SELECT count(*) FROM {slashcomments_users_stats} WHERE uid = %d";
@@ -815,12 +822,12 @@ function slashcomments_update_user_stats($uid) {
 
   // Query to extract stats on posted comments
   $sql =  "SELECT count(*) posted,
-      SUM(CASE WHEN num_ratings <> 0 AND score < 1 THEN 1 ELSE 0 END) negative,
-      SUM(CASE WHEN num_ratings <> 0 AND score > 1 THEN 1 ELSE 0 END) positive,
-      SUM(CASE WHEN r.content_id is null OR num_ratings = 0 OR score = 1 THEN 1 ELSE 0 END) neutral
-      FROM {comments} c LEFT JOIN {slashcomments_contents_rating} r
-      ON c.cid = r.content_id
-      WHERE c.uid = %d";
+    SUM(CASE WHEN num_ratings <> 0 AND score < 1 THEN 1 ELSE 0 END) negative,
+    SUM(CASE WHEN num_ratings <> 0 AND score > 1 THEN 1 ELSE 0 END) positive,
+    SUM(CASE WHEN r.content_id is null OR num_ratings = 0 OR score = 1 THEN 1 ELSE 0 END) neutral
+    FROM {comments} c LEFT JOIN {slashcomments_contents_rating} r
+    ON c.cid = r.content_id
+    WHERE c.uid = %d";
 
   // Extract the data
   $result = db_query($sql, $uid);
@@ -828,9 +835,9 @@ function slashcomments_update_user_stats($uid) {
 
   // Query to extract stats on moderated comments
   $sql = "SELECT count(*) moderated,
-      SUM(CASE WHEN score < 0 THEN 1 ELSE 0 END) moderated_negative,
-      SUM(CASE WHEN score > 0 THEN 1 ELSE 0 END) moderated_positive,
-      SUM(CASE WHEN score = 0 THEN 1 ELSE 0 END) moderated_neutral
+    SUM(CASE WHEN score < 0 THEN 1 ELSE 0 END) moderated_negative,
+    SUM(CASE WHEN score > 0 THEN 1 ELSE 0 END) moderated_positive,
+    SUM(CASE WHEN score = 0 THEN 1 ELSE 0 END) moderated_neutral
     FROM {votingapi_vote} v, {slashcomments_rating_options} o
     WHERE v.value = o.rating_id
     AND content_type = 'comment' AND tag = 'slashcomments'
@@ -895,7 +902,7 @@ function slashcomments_update_karma($uid) {
 
   // Extract the data and fill missing fields
   $result = db_query($sql, $lowest_for_karma, $lowest_for_karma,
-            $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
+    $highest_for_karma, $highest_for_karma, $uid, $comments_for_karma);
   $record = db_fetch_object($result);
   $record->uid = $uid;
   $record->modified = time();
@@ -1171,12 +1178,25 @@ function slashcomments_preprocess_comment(&$variables) {
   $variables['slashcomments_rating'] = theme('slashcomments_rating', $rating);
 
   $reply = arg(0) == 'comment' && (arg(1) == 'reply' || arg(1) == 'edit');
-  $can_vote = slashcomments_user_can_moderate($user->uid, $comment->cid);
+  //$can_vote = slashcomments_user_can_moderate($user->uid, $comment->cid);
+  $can_vote = slashcomments_user_can_moderate_comment($user->uid, $comment->cid);
 
-  // Hide moderation module if user can't moderate or is on the edit or reply page
-  if (!$reply && $can_vote['result'] == 1) {
-    $variables['slashcomments_form'] = theme('slashcomments_form_wrapper', $comment->cid, $comment->uid, "");
-    //_slashcomments_get_moderation_message(1,$comment->uid));
+  // Show moderation form if the user can moderate and is not on the edit or reply page
+  //if (!$reply && $can_vote['result'] == 1) {
+  if (!$reply) {
+    $msg_attrib = array('uid' => $user->uid, 'cid' => $comment->cid);
+
+    if($can_vote == USER_CAN_MODERATE) {
+      $msg_filter = array(USER_CAN_MODERATE);
+      $show_form = TRUE;
+    }
+    else {
+      $msg_filter = array(ALREADY_MODERATED, OWN_COMMENT);
+      $show_form = FALSE;
+    }
+
+    $messages = _slashcomments_can_moderate_msg($can_vote, $msg_attrib, $msg_filter);
+    $variables['slashcomments_form'] = theme('slashcomments_form_wrapper', $comment->cid, $comment->uid, $show_form, $messages);
   }
 
   // add karma if it's enabled
@@ -1360,15 +1380,32 @@ function slashcomments_theme_registry_alter($theme_registry) {
  * @return
  *  HTML for the message to display after moderation
  */
-function theme_slashcomments_moderation_status($result) {
+function theme_slashcomments_post_moderation_status($result) {
   $class = ($result['result']) ? 'ok' : 'error';
   $output = '<div class="messages ' . $class . '">';
-  $output .= $result['message'];
+  $output .= ($result['result']) ? t('Comment moderated! ') : '';
+  $output .= implode("\n", $result['message']);
   $output .= '</div>';
 
   return $output;
 }
 
+/*
+ * Themes the status message displayed under or instead of the moderation forum
+ *
+ * @parma $result
+ * Array with the list of messages tp display
+ *
+ * @return
+ *  HTML for the messages to display
+ */
+function theme_slashcomments_comment_moderation_status($messages) {
+  //$output = '<div class="slashcomments-comment-moderation-status">';
+  $output .= implode("\n", $messages);
+  //$output .= '</div>';
+
+  return $output;
+}
 
 /**
  * Themes slashcomments_rating and score. 
@@ -1431,12 +1468,20 @@ function theme_slashcomments_karma($karma) {
  * @return
  *   -HTML to display the form to moderate comments
  */
-function theme_slashcomments_form_wrapper($cid, $uid, $message) {
+function theme_slashcomments_form_wrapper($cid, $uid, $show_form = TRUE,  $messages = '') {
+  $msg_class = '';
   $output =  '<div id="slashcomments-form-wrapper-' . $cid . '" class="scomments_container">';
   $output .= '<div class="container-inline">';
-  $output .= '<div class="scomments_form">' .  drupal_get_form('slashcomments_moderation_form', $cid, $uid) . '</div>';
+
+  if($show_form) {
+    $output .= '<div class="scomments_form">' .  drupal_get_form('slashcomments_moderation_form', $cid, $uid) . '</div>';
+    $msg_class = 'slashcomments-with-form';
+  }
+
   $output .= '<div class="scomments_loader"></div>';
-  $output .= '<div class="scomments_form_status description">' . $message . '</div>';
+  $output .= '<div class="slashcomments-comment-moderation-status ' . $msg_class . '">';
+  $output .= theme('slashcomments_comment_moderation_status', $messages);
+  $output .= '</div>';
   $output .= '</div></div>';
   return $output;
 }
@@ -1920,44 +1965,59 @@ function slashcomments_use_mod_point($uid) {
  * @return
  *  Text message related to user status regarding moderation
  */
-function _slashcomments_get_moderation_message($code, $uid) {
+function _slashcomments_can_moderate_msg($status, $attrib = array(), $filter = array()) {
   global $user;
 
-  $message = "";
+  $message = '';
+  $messages = array();
+  $uid = $attrib['uid'];
+  $cid = $attrib['cid'];
 
-  switch ($code) {
-  case -1 :
-    $message = t("You don't have permission to moderate this comment");
-    break;
-  case -2 :
-    $message = t("You need a karma value of !karma before you can moderate this comment",
+  if($status & NO_MOD_PERMISSION) {
+    $messages[NO_MOD_PERMISSION] = t("You don't have permission to moderate comments.");
+  }
+
+  if($status & IS_NEWBIE) {
+    $time_str = slashcomments_get_time_str($user->created - strtotime("-" . _slashcomments_get_limit_newbie() . " day"));
+    $messages[IS_NEWBIE] = t("Being a new user you have to wait !timeleft before you can moderate.",
+      array("!timeleft" => $time_str));
+  }
+
+  if($status & LOW_KARMA) {
+    $messages[LOW_KARMA] = t("You need a karma value of !karma before you can moderate comments.",
       array('!karma' => _slashcomments_get_limit_karma()));
-    break;
-  case -3 :
+  }
+
+  if($status & NO_MOD_POINTS) {
     $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
 
     $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
-    $message = t("You don't have any moderation point. You'll get more in !timeleft",
+    $messages[NO_MOD_POINTS] = t("You don't have any moderation point. You'll get more in !timeleft.",
       array("!timeleft" => $time_str));
-    break;
-  case -4 :
-    $message = t("You can't moderate comments on your own content");
-    break;
-  case -5 :
-    $time_str = slashcomments_get_time_str($user->created - strtotime("-" . _slashcomments_get_limit_newbie() . " day"));
-    $message = t("Being a new user you have to wait !timeleft before you can moderate",
-      array("!timeleft" => $time_str));
-    break;
-  case -6 :
-    $message = t("You have already moderated this comment");
-    break;
-  case -7 :
-    $message = t("You can't moderate comments on contents you commented");
-    break;
-  case -8 :
-    $message = t("You can't moderate your own comment");
-    break;
-  case 1 :
+  }
+
+  if($status & USER_IS_NODE_AUTHOR) {
+    $messages[USER_IS_NODE_AUTHOR] = t("You can't moderate comments on your own content.");
+  }
+
+  if($status & ALREADY_MODERATED) {
+    $vote = votingapi_select_votes(array('content_type' => 'comment', 
+      'content_id' => $cid, 'uid' => $uid, 'tag' => 'slashcomments'));
+
+    $sql = "SELECT rating FROM {slashcomments_rating_options} WHERE rating_id = %d";
+    $rating = db_result(db_query($sql, $vote[0]['value']));
+    $messages[ALREADY_MODERATED] = t("You have already moderated this comment as " . $rating . ".");
+  }
+
+  if($status & TOOK_PART) {
+    $messages[TOOK_PART] = t("You can't moderate comments on contents you commented.");
+  }
+
+  if($status & OWN_COMMENT) {
+    $messages[OWN_COMMENT] = t("You can't moderate your own comment.");
+  }
+
+  if($status & USER_CAN_MODERATE) {
     if (_slashcomments_get_mod_per_day) {
       $mod_points = slashcomments_get_user_mod_points($uid);
       if ($mod_points) {
@@ -1966,23 +2026,36 @@ function _slashcomments_get_moderation_message($code, $uid) {
           $message = '';
         }
         else {
-          $message = t("You have !modpoints moderation points left",
+          $messages[USER_CAN_MODERATE] = t("You have !modpoints moderation points left.",
             array('!modpoints' => $mod_points));
         }
       }
       else {
-        $assigned = db_result(db_query("SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d", $uid));
+        $sql = "SELECT assigned FROM {slashcomments_users_mod_points} WHERE uid = %d";
+        $assigned = db_result(db_query($sql, $uid));
 
         $time_str = slashcomments_get_time_str(60*60*24 - (time() - $assigned));
-        $message = t("You don't have any moderation point. You'll get more in !timeleft",
+        $messages[USER_CAN_MODERATE] = t("You don't have any moderation point. You'll get more in !timeleft.",
           array("!timeleft" => $time_str));
       }
     }
-    break;
   }
 
-  return $message;
+  $result = array();
+  if(count($filter)) {
+    foreach($filter as $v) {
+      if($messages[$v]) {
+        $result[$v] = $messages[$v];
+      }
+    }
+  }
+  else {
+    $result = $messages;
+  }
+
+  return $result;
 }
+
 
 /*
  * Returns days,  hours and minutes correspondings 

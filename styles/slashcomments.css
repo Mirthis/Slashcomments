@@ -33,14 +33,21 @@ div.scomments_form_status {
     display:none;*/
 }
 
-div.scomments_form_status .messages {
+div.slashcomments-comment-moderation-status .messages {
   display:block;
   margin:0px;
 }
 
+
+div.slashcomments-comment-moderation-status {
+  font-size:80%;
+  color: #999;
+  padding-left:2px;
+}
+
 div.scomments_container {
-    height:35px;
-    margin:25px 0 5px 0;
+    height:20px;
+    margin:20px 0 0px 0;
 }
 
 span.scomments_info {
