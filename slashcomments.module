@@ -256,7 +256,7 @@ function slashcomments_user_can_moderate($uid) {
   /* skip controls for the super user or user with specific permissions*/
   $bypass = user_access('bypass moderation restriction');
 
-  if (user_access('administer slashcomments') && $uid == 1 && $bypass) {
+  if (user_access('administer slashcomments') || $uid == 1 || $bypass) {
     $result |= USER_CAN_MODERATE;
     return $result;
   }
