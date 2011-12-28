@@ -1125,25 +1125,66 @@ function slashcomments_moderation_form($form_state, $cid, $uid) {
  * Implementation of hook_user().
  */
 function slashcomments_user($op, &$edit, &$account, $category = 'account') {
+  global $user;
+
   switch ($op) {
   case 'view':
-    if (!_slashcomments_karma_enabled()) {
-      break;
+    if (_slashcomments_karma_enabled()) {
+      $user_karma = slashcomments_get_user_display_karma($account->uid);
+
+    }
+    if($user->uid == $account->uid || $user->uid == 1 || user_access('administer slashcomments')) {
+      if(_slashcomments_get_mod_per_day() != SLASHCOMMENTS_INFINITE_MOD_POINTS) {
+        $mod_points = slashcomments_get_user_mod_points($account->uid);
+
+        if($mod_pints == SLASHCOMMENTS_INFINITE_MOD_POINTS) {
+          $mod_points = t('Infinite');
+        }
+      }
+
+      $can_vote = slashcomments_user_can_moderate($user->uid);
+
+      $msg_attrib = array('uid' => $user->uid);
+      $msg_filter = array(IS_NEWBIE, LOW_KARMA);
+
+      $messages = _slashcomments_can_moderate_msg($can_vote, $msg_attrib, $msg_filter);
     }
 
-    $user_karma = slashcomments_get_user_display_karma($account->uid);
+    if(isset($user_karma) || isset($mod_points) || count($messages)) {
+      $account->content['slashcomments'] = array(
+        '#type' => 'user_profile_category',
+        '#title' => t('Comment Moderations'),
+        '#weight' => 10,
+      );
+    }
 
-    $account->content['slashcomments_karma'] = array(
-      '#type' => 'user_profile_category',
-      '#title' => t('Karma'),
-      '#weight' => 10,
-    );
-    $account->content['slashcomments_karma']['karma'] = array(
-      '#title' => t('Current value'),
-      '#type' => 'user_profile_item',
-      '#value' => $user_karma,
-      '#weight' => 1,
-    );
+    if(isset($user_karma)) {
+      $account->content['slashcomments']['karma'] = array(
+        '#title' => t('Karma value'),
+        '#type' => 'user_profile_item',
+        '#value' => $user_karma,
+        '#weight' => 1,
+      );
+    }
+
+    if(isset($mod_points)) { 
+      $account->content['slashcomments']['mod_points'] = array(
+        '#title' => t('Moderation points'),
+        '#type' => 'user_profile_item',
+        '#value' => $mod_points,
+        '#weight' => 2,
+      );
+    }
+
+    if(count($messages)) { 
+      $account->content['slashcomments']['mod_points'] = array(
+        '#title' => t('Moderation status'),
+        '#type' => 'user_profile_item',
+        '#value' => theme('slashcomments_comment_moderation_status', $messages),
+        '#weight' => 2,
+      );
+    }
+
     break;
   case 'delete':
     delete_slashcomments_user_data($account->uid);
@@ -1401,7 +1442,7 @@ function theme_slashcomments_post_moderation_status($result) {
  */
 function theme_slashcomments_comment_moderation_status($messages) {
   //$output = '<div class="slashcomments-comment-moderation-status">';
-  $output .= implode("\n", $messages);
+  $output .= implode("<br/>", $messages);
   //$output .= '</div>';
 
   return $output;
@@ -2023,7 +2064,7 @@ function _slashcomments_can_moderate_msg($status, $attrib = array(), $filter = a
       if ($mod_points) {
         if ($mod_points == SLASHCOMMENTS_INFINITE_MOD_POINTS) {
           //$mod_points = t('unlimited');
-          $message = '';
+          //$message = '';
         }
         else {
           $messages[USER_CAN_MODERATE] = t("You have !modpoints moderation points left.",

@@ -304,8 +304,11 @@ function slashcomments_admin_general_form_validate($form, &$form_state) {
   if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_limit_newbie'])) {
     form_set_error('slashcomments_limit_newbie', t('Numbers of days before a new user can moderate must be a non-negative number'));
   }
-  if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_mod_per_day'])) {
-    form_set_error('slashcomments_mod_per_day', t('Daily moderation per user must be greater or equal to 0'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_mod_per_day'])) {
+    form_set_error('slashcomments_mod_per_day', t('Daily moderation per user must be an integer'));
+  }
+  else if($form_state['values']['slashcomments_mod_per_day'] <= SLASHCOMMENTS_INFINITE_MOD_POINTS)  {
+    $form_state['values']['slashcomments_mod_per_day'] = SLASHCOMMENTS_INFINITE_MOD_POINTS;
   }
 }
 
@@ -313,8 +316,7 @@ function slashcomments_admin_karma_form_validate($form, &$form_state) {
   if (!$form_state['values']['slashcomments_enable_karma']) {
     return;
   }
-  if (!_slashcomments_is_integet($form_state['values']['slashcomments_default_karma'])) {
-    form_set_error('slashcomments_default_karma', t('Default karma value must be an integer'));
+  if (!_slashcomments_is_integet($form_state['values']['slashcomments_default_karma'])) { form_set_error('slashcomments_default_karma', t('Default karma value must be an integer'));
   }
   if (!_slashcomments_is_non_negative_integet($form_state['values']['slashcomments_ratings_for_karma'])) {
     form_set_error('slashcomments_ratings_for_karma', t('Moderated comments before karma is calculated must be greater or equal to 0'));
@@ -400,7 +402,7 @@ function theme_slashcomments_admin_ratings_form($form) {
 function slashcomments_update_all_karma() {
   $batch  = array(
     'operations' => array(array('slashcomments_batch_update_karma', array()),
-                          array('slashcomments_batch_update_content_karma',array())),
+    array('slashcomments_batch_update_content_karma',array())),
     'finished' => 'slashcomments_batch_update_karma_finished',
     'title' => t('Updating users karma'),
     'init_message' => t('Karma update is starting.'),
