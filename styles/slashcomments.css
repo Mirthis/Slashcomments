@@ -81,3 +81,54 @@ span.scomments_info {
 div.collapsed {
   display:none;
 }
+
+div.slashcomments-notification {
+  border: 1px solid #000;
+  position: fixed;
+  right:0px;
+  top:0px;
+  margin: 5px;
+  padding:5px;
+  background-color: #fff;
+  font-size:70%;
+  width:200px;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  -o-border-radius: 3px;
+  -khtml-border-radius: 3px;
+  border-radius: 3px;
+}
+
+div.slashcomments-notification-header {
+  font-weight:bold;
+}
+
+p.slashcomments-notification-title {
+  margin:0px;
+  display:inline-block;
+}
+
+div.slashcomments-notification-body p {
+  line-height:1.5em;
+  text-align:justify;
+  margin-bottom:0px;
+}
+
+div.slashcomments-notification-close {
+  float:right;
+  font-size:110%;
+}
+
+div.slashcomments-notification-close a:link,
+div.slashcomments-notification-close a:visited
+{
+  color:#000;
+  text-decoration:none;
+}
+
+div.slashcomments-notification-close a:hover,
+div.slashcomments-notification-close a:active
+{
+  color:#f00;
+  text-decoration:none;
+}

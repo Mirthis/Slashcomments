@@ -302,6 +302,44 @@ function slashcomments_get_schema() {
       'primary key' => array('uid'),
     );
 
+  $schema['slashcomments_users_notifications'] = array(
+      'description' => t('TODO: please describe this table!'),
+      'fields' => array(
+        'sunid' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'serial',
+          'not null' => TRUE,
+          ),
+        'uid' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          ),
+        'ntype_id' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => FALSE,
+          ),
+        'display_times' => array(
+          'description' => t('TODO: please describe this field!'),
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0
+          ),
+        'created' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        'modified' => array(
+            'description' => t('TODO: please describe this field!'),
+            'type' => 'int',
+            'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('sunid'),
+        );
+
   return $schema;
 }
 
@@ -313,7 +351,7 @@ function slashcomments_install() {
   db_query("UPDATE {system} SET weight = 15 WHERE name = 'slashcomments'");
 
   slashcomments_init_settings();
-slashcomments_init_database();
+  slashcomments_init_database();
 }
 
 /**
@@ -370,35 +408,35 @@ function slashcomments_init_database() {
   $ret = array();
 
   $sql = "INSERT INTO {slashcomments_karma_modifier} (karma_mod_id, karma_from, karma_to, modifier, created, modified)
-VALUES
-(1, 1, 1, 0, $created, $created),
-(2, -1000, 0, -1, $created, $created),
-(3, 2, 1000, 1, $created, $created)
-";
+    VALUES
+    (1, 1, 1, 0, $created, $created),
+    (2, -1000, 0, -1, $created, $created),
+    (3, 2, 1000, 1, $created, $created)
+      ";
 
-update_sql($sql);
+  update_sql($sql);
 
-// db_query("TRUNCATE TABLE slashcomments_karma_modifier");
-$sql = "INSERT INTO {slashcomments_rating_options}
-(rating_id, rating, score, weight, enabled, created, modified)
-VALUES
-(99, 'Normal', 0, 0, 0, $created, $created),
-(1, 'Offtopic', -1, 1, 1, $created, $created),
-(2, 'Flamebait', -1, 2, 1, $created, $created),
-(3, 'Trolling', -1, 3, 1, $created, $created),
-(4, 'Reduntant', -1, 4, 1, $created, $created),
-(5, 'Insightful', 1, 5, 1, $created, $created),
-(6, 'Interesting', 1, 6, 1, $created, $created),
-(7, 'Informative', 1, 7, 1, $created, $created),
-(8, 'Funny', 1, 8, 1, $created, $created),
-(9, 'Overrated', -1, 9, 1, $created, $created),
-(10, 'Underrated', 1, 10, 1, $created, $created)
-";
+  // db_query("TRUNCATE TABLE slashcomments_karma_modifier");
+  $sql = "INSERT INTO {slashcomments_rating_options}
+  (rating_id, rating, score, weight, enabled, created, modified)
+    VALUES
+    (99, 'Normal', 0, 0, 0, $created, $created),
+    (1, 'Offtopic', -1, 1, 1, $created, $created),
+    (2, 'Flamebait', -1, 2, 1, $created, $created),
+    (3, 'Trolling', -1, 3, 1, $created, $created),
+    (4, 'Reduntant', -1, 4, 1, $created, $created),
+    (5, 'Insightful', 1, 5, 1, $created, $created),
+    (6, 'Interesting', 1, 6, 1, $created, $created),
+    (7, 'Informative', 1, 7, 1, $created, $created),
+    (8, 'Funny', 1, 8, 1, $created, $created),
+    (9, 'Overrated', -1, 9, 1, $created, $created),
+    (10, 'Underrated', 1, 10, 1, $created, $created)
+      ";
 
-update_sql($sql);
+  update_sql($sql);
 
-$sql = "UPDATE {slashcomments_rating_options} SET rating_id = 0 WHERE rating_id = 99";
-update_sql($sql);
+  $sql = "UPDATE {slashcomments_rating_options} SET rating_id = 0 WHERE rating_id = 99";
+  update_sql($sql);
 }
 
 function slashcomments_update_6101(&$sandbox) {
@@ -412,7 +450,7 @@ function slashcomments_update_6101(&$sandbox) {
   db_create_table($ret, 'slashcomments_rating_options', $schema['slashcomments_rating_options']);
   db_create_table($ret, 'slashcomments_users_karma', $schema['slashcomments_users_karma']);
   db_create_table($ret, 'slashcomments_users_mod_points',
-  $schema['slashcomments_users_mod_points']);
+      $schema['slashcomments_users_mod_points']);
 
   slashcomments_init_database();
 
@@ -437,36 +475,36 @@ function slashcomments_update_6101(&$sandbox) {
 function slashcomments_update_6102(&$sandbox) {
   $ret = array();
   /*
-  $batch  = array(
-      'operations' => array(
-        array('slashcomments_batch_init_ratings', array()),
-        array('slashcomments_batch_update_content_karma', array()),
-        ),
-      'title' => t('Update data to version 6.x-1.1 - 02'),
-      'init_message' => t('Database upate is starting.'),
-      'progress_message' => t('Processed @current out of @total.'),
-      'error_message' => t('Database update has encountered an error.'),
-      'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
-      );
+     $batch  = array(
+     'operations' => array(
+     array('slashcomments_batch_init_ratings', array()),
+     array('slashcomments_batch_update_content_karma', array()),
+     ),
+     'title' => t('Update data to version 6.x-1.1 - 02'),
+     'init_message' => t('Database upate is starting.'),
+     'progress_message' => t('Processed @current out of @total.'),
+     'error_message' => t('Database update has encountered an error.'),
+     'file' => drupal_get_path('module', 'slashcomments') . '/includes/batch.inc',
+     );
 
-  $cur_batch = & batch_get();
-  $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
-  if($last_set['title'] = 'Update data to version 6.x-1.1 - 01') {
-    $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
-    $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
-  }
-  else {
-   batch_set($batch);
-  }
-  */
+     $cur_batch = & batch_get();
+     $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
+     if($last_set['title'] = 'Update data to version 6.x-1.1 - 01') {
+     $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
+     $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
+     }
+     else {
+     batch_set($batch);
+     }
+   */
   return $ret;
 }
 
 function slashcomments_update_6103(&$sandbox) {
   $ret = array();
 
-  if(!db_column_exists('slashcomments_contents_karma', 'score')) {
-    db_add_field($ret, 'slashcomments_contents_karma','score',array(
+  if (!db_column_exists('slashcomments_contents_karma', 'score')) {
+    db_add_field($ret, 'slashcomments_contents_karma', 'score', array(
           'description' => t('TODO: please describe this field!'),
           'type' => 'int',
           'not null' => TRUE,
@@ -474,8 +512,8 @@ function slashcomments_update_6103(&$sandbox) {
           ));
   }
 
-  if(!db_column_exists('slashcomments_contents_rating', 'last_rated')) {
-    db_add_field($ret, 'slashcomments_contents_rating','last_rated',array(
+  if (!db_column_exists('slashcomments_contents_rating', 'last_rated')) {
+    db_add_field($ret, 'slashcomments_contents_rating', 'last_rated', array(
           'description' => t('TODO: please describe this field!'),
           'type' => 'int',
           'not null' => TRUE,
@@ -496,12 +534,12 @@ function slashcomments_update_6103(&$sandbox) {
 
   $cur_batch = & batch_get();
   $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
-  if($last_set['title'] == 'Update data to version 6.x-1.1 - 01') {
+  if ($last_set['title'] == 'Update data to version 6.x-1.1 - 01') {
     $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
     $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
   }
   else {
-   batch_set($batch);
+    batch_set($batch);
   }
 
   return $ret;
@@ -532,17 +570,26 @@ function slashcomments_update_6104(&$sandbox) {
 
   $cur_batch = & batch_get();
   $last_set = $cur_batch['sets'][count($cur_batch['sets'])-1];
-  if($last_set['title'] == 'Update data to version 6.x-1.1 - 03') {
+  if ($last_set['title'] == 'Update data to version 6.x-1.1 - 03') {
     $cur_batch['sets'][count($cur_batch['sets'])-1]['operations'] = array_merge($last_set['operations'], $batch['operations']);
     $cur_batch['sets'][count($cur_batch['sets'])-1]['total'] = count($cur_batch['sets'][count($cur_batch['sets'])-1]['operations']);
   }
   else {
-   batch_set($batch);
+    batch_set($batch);
   }
 
   return $ret;
 }
 
+function slashcomments_update_6105(&$sandbox) {
+
+  $schema = slashcomments_get_schema();
+  $ret = array();
+
+  db_create_table($ret, 'slashcomments_users_notifications', $schema['slashcomments_users_notifications']);
+
+  return $ret;
+}
 
 /*
    Batch 'finished' callback

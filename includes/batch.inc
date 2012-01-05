@@ -78,14 +78,14 @@ function slashcomments_batch_update_content_karma(&$context) {
     FROM {slashcomments_contents_rating} r
     LEFT JOIN {slashcomments_contents_karma} k
     ON r.content_id = k.content_id
-    WHERE r.content_id > %d 
+    WHERE r.content_id > %d
     ORDER BY cid ASC";
 
   $result = db_query_range($sql, $context['sandbox']['current_cid'], 0, $limit);
 
   while ($row = db_fetch_array($result)) {
-    if($row['k_cid'] === null) {
-      slashcomments_init_contents_karma($row['cid'], $row['uid'],TRUE);
+    if ($row['k_cid'] === NULL) {
+      slashcomments_init_contents_karma($row['cid'], $row['uid'], TRUE);
     }
     slashcomments_update_contents_karma($row['cid']);
 
@@ -119,7 +119,7 @@ function slashcomments_batch_update_content_karma_finished($success, $results, $
 function slashcomments_batch_init_ratings(&$context) {
 
   $sql = "SELECT count(*)
-    FROM {comments} c 
+    FROM {comments} c
     LEFT JOIN {slashcomments_contents_rating} r
     ON c.cid = r.content_id
     WHERE r.content_id is null";
@@ -135,8 +135,8 @@ function slashcomments_batch_init_ratings(&$context) {
   $limit = SLASHCOMMENTS_BATCH_SIZE_INIT_RATINGS;
 
   // With each pass through the callback, retrieve the next group of nids.
-  $sql = "SELECT c.cid, c.uid, k.content_id k_cid 
-    FROM {comments} c 
+  $sql = "SELECT c.cid, c.uid, k.content_id k_cid
+    FROM {comments} c
     LEFT JOIN {slashcomments_contents_rating} r
     ON c.cid = r.content_id
     LEFT JOIN {slashcomments_contents_karma} k
@@ -148,9 +148,9 @@ function slashcomments_batch_init_ratings(&$context) {
   while ($row = db_fetch_array($result)) {
     slashcomments_update_rating($row['cid']);
 
-    if(_slashcomments_karma_enabled()) {
-      if($row['k_cid'] === null) {
-        slashcomments_init_contents_karma($row['cid'], $row['uid'],TRUE);
+    if (_slashcomments_karma_enabled()) {
+      if ($row['k_cid'] === NULL) {
+        slashcomments_init_contents_karma($row['cid'], $row['uid'], TRUE);
       }
       slashcomments_update_contents_karma($row['cid']);
     }

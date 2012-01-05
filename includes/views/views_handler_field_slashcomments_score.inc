@@ -1,11 +1,12 @@
 <?php
+// $Id$
 /**
  * @file
  * A handler to provide proper displays for the comment score
  */
 class views_handler_field_slashcomments_score extends views_handler_field_numeric {
   function render($values) {
-    if($score = $values->slashcomments_contents_rating_score) {
+    if ($score = $values->slashcomments_contents_rating_score) {
       return $score;
     }
     else {

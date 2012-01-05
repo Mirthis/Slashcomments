@@ -1,5 +1,7 @@
 <?php
+// $Id$
 /**
+ * @file
  * Implementation of hook_views_default_views().
  */
 function slashcomments_views_default_views() {

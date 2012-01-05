@@ -8,15 +8,17 @@ jQuery.fn.slideFadeToggle = function(speed, easing, callback) {
 Drupal.behaviors.slashcomments = function(context) {
   $("form[id^='slashcomments-moderation-form']").live('submit', slashcomments_submit_moderation_form);
   $('div.toggle_label').live('click',slashcomments_load_comment);
-};
+  $('div.slashcomments-notification-close a').bind('click', slashcomments_hide_notification);
+}
 
 function slashcomments_load_comment() {
+
   id = '';
   if($(this).parent("div[id^='comment-']").length > 0) {
-   id =  $(this).parent("div[id^='comment-']").attr('id');
+    id =  $(this).parent("div[id^='comment-']").attr('id');
   }
   else {
-id =  $(this).parent("div[id^='post-']").attr('id');
+    id =  $(this).parent("div[id^='post-']").attr('id');
   }
   cid = id.substring(id.lastIndexOf('-')+1);
   var loaded = function (data) {
@@ -89,7 +91,7 @@ function slashcomments_submit_moderation_form() {
     var form_obj = $('#'+form_id);
 
     $(cont_obj).find('div.scomments_loader').empty();
-    $(cont_obj).find('div.slashcomments-comment-moderation-status').html(Drupal.settings.slashdot.error_status).css('display','inline');
+    $(cont_obj).find('div.slashcomments-comment-moderation-status').html(Drupal.settings.slashcomments.error_status).css('display','inline');
     $(form_obj).find('select').attr("disabled", "");
     $(form_obj).find('input').attr("disabled", "");
   }
@@ -97,7 +99,7 @@ function slashcomments_submit_moderation_form() {
   $(this).find('select').attr("disabled", "true");
   $(this).find('input').attr("disabled", "true");
   $(cont_obj).find('div.slashcomments-comment-moderation-status').css('display','none');
-  $(cont_obj).find('div.scomments_loader').html('<img src="'+Drupal.settings.slashdot.load_image_path+'"/>');
+  $(cont_obj).find('div.scomments_loader').html('<img src="'+Drupal.settings.slashcomments.load_image_path+'"/>');
 
   $.ajax({
     type: 'POST',       // Use the POST method.
@@ -109,4 +111,15 @@ function slashcomments_submit_moderation_form() {
   })
 
   return false;
+}
+
+function slashcomments_hide_notification() {
+  $("div.slashcomments-notification").fadeOut(500);
+  uid = Drupal.settings.slashcomments.uid;
+  ntype = 1;
+
+  $.ajax({
+    type: 'GET',       // Use the POST method.
+    url: Drupal.settings.baseUrl+'/slashcomments/dismiss_notification'
+  })
 }

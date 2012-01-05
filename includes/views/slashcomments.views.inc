@@ -1,4 +1,5 @@
 <?php
+// $Id$
 /**
  * @file
  * This defines views hooks for the slashcomments module.
@@ -14,7 +15,7 @@ function slashcomments_views_handlers() {
     'handlers' => array(
       'views_handler_field_slashcomments_user_karma' => array(
         'parent' => 'views_handler_field_numeric',
-        'path' => drupal_get_path('module','slashcomments') . '/includes/views',
+        'path' => drupal_get_path('module', 'slashcomments') . '/includes/views',
         'file' => 'views_handler_field_slashcomments_user_karma.inc'
       )
     ),
