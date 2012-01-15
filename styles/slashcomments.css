@@ -132,3 +132,19 @@ div.slashcomments-notification-close a:active
   color:#f00;
   text-decoration:none;
 }
+
+div.slashcomments-help ul {
+  margin:10px 0 10px 0j;
+}
+
+div.slashcomments-help ul ul {
+  margin:0 0 0 20px;
+}
+
+div.slashcomments-help h2 {
+  margin:20px 0 10px 0;
+}
+
+div.slashcomments-help h3 {
+  margin:10px 0 5px 0;
+}

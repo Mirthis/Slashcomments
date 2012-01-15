@@ -140,16 +140,21 @@ function slashcomments_menu() {
   // Add the callback to the public help page
   $items['slashcomments/help'] = array(
     'title' => 'Slashcomments Help Page',
-    //'page callback' => 'slashcomments_help_page',
     'page callback' => 'theme',
     'page arguments' => array('slashcomments_help'),
     'access callback' => TRUE,
     'type' => MENU_SUGGESTED_ITEM,
-    'file path' => drupal_get_path('module', 'slashcomments') . '/includes/',
-    'file' => 'slashcomments_help.inc',
+    //'file path' => drupal_get_path('module', 'slashcomments') . '/includes/',
+    //'file' => 'slashcomments_help.inc',
   );
 
   return $items;
+}
+
+function template_preprocess_slashcomments_help(&$variables) {
+  drupal_add_css(drupal_get_path('module', 'slashcomments') .'/styles/slashcomments.css');
+  $variables['moderations_points'] = _slashcomments_get_mod_per_day();
+  $variables['limit_take_part'] = _slashcomments_get_limit_takepart();
 }
 
 function slashcomments_enable() {
@@ -225,7 +230,6 @@ function slashcomments_theme() {
 
   return $items;
 }
-
 
 /**
  * Implementation of hook_perm().
